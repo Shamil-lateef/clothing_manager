@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-<a href="/" class="btn btn-secondary mb-3">← Back to Product List</a>
+<a href="{{ url_for('index') }}" class="btn btn-secondary mb-3">← Back to Product List</a>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
@@ -13,22 +13,41 @@
 <form method="POST">
   <div class="mb-3">
     <label>Select Product</label>
-    <select name="product_index" class="form-select" required>
+    <select name="product_id" class="form-select" required onchange="updateSizes(this)">
+      <option value="">-- Select a product --</option>
       {% for product in products %}
-        <option value="{{ loop.index0 }}">Product {{ loop.index }} – {{ product.style_url }}</option>
+        <option value="{{ product.id }}" data-sizes="{{ ','.join([sq.size for sq in product.sizes]) }}">
+          Product #{{ product.id }} – {{ product.style_url }}
+        </option>
       {% endfor %}
     </select>
   </div>
 
   <div class="mb-3">
     <label>Select Size</label>
-    <select name="size" class="form-select" required>
-      {% for size in products[0].sizes.keys() %}
-        <option value="{{ size }}">{{ size }}</option>
-      {% endfor %}
+    <select name="size" id="sizeDropdown" class="form-select" required>
+      <option value="">-- Select a size --</option>
     </select>
   </div>
 
   <button class="btn btn-primary">Sell Item</button>
 </form>
+
+<script>
+function updateSizes(selectElement) {
+  const selectedOption = selectElement.options[selectElement.selectedIndex];
+  const sizeDropdown = document.getElementById('sizeDropdown');
+  sizeDropdown.innerHTML = '<option value="">-- Select a size --</option>';
+
+  if (selectedOption && selectedOption.dataset.sizes) {
+    const sizes = selectedOption.dataset.sizes.split(',');
+    for (const size of sizes) {
+      const option = document.createElement('option');
+      option.value = size;
+      option.text = size;
+      sizeDropdown.appendChild(option);
+    }
+  }
+}
+</script>
 {% endblock %}
