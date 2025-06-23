@@ -41,7 +41,7 @@ with app.app_context():
 
 @app.route("/")
 def index():
-    low_stock_threshold = 3
+    low_stock_threshold = 1
     products = Product.query.all()
 
     # Collect low stock items: list of dicts {product, size, quantity}
