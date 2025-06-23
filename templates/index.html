@@ -17,9 +17,9 @@
           <p><strong>Stock:</strong></p>
           <ul>
             {% for sq in product.sizes %}
-              <li {% if sq.quantity <= 3 %} style="color: red; font-weight: bold;" {% endif %}>
+              <li {% if sq.quantity <= 1 %} style="color: red; font-weight: bold;" {% endif %}>
                 {{ sq.size }}: {{ sq.quantity }}
-                {% if sq.quantity <= 3 %} ⚠️ Low Stock {% endif %}
+                {% if sq.quantity <= 1 %} ⚠️ Low Stock {% endif %}
               </li>
             {% endfor %}
           </ul>
