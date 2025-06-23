@@ -16,7 +16,7 @@
     <select name="product_id" class="form-select" required onchange="updateSizes(this)">
       <option value="">-- Select a product --</option>
       {% for product in products %}
-        <option value="{{ product.id }}" data-sizes="{{ ','.join([sq.size for sq in product.sizes]) }}">
+        <option value="{{ product.id }}" data-sizes="{% for sq in product.sizes %}{{ sq.size }}{% if not loop.last %},{% endif %}{% endfor %}">
           Product #{{ product.id }} – {{ product.style_url }}
         </option>
       {% endfor %}
