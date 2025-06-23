@@ -9,10 +9,20 @@
     <label>Style URL</label>
     <input type="url" name="style_url" class="form-control" required>
   </div>
-  <div class="mb-3">
-    <label>Sizes and Quantities (e.g. 2T:5, 3T:3)</label>
-    <input type="text" name="sizes" class="form-control" required>
+
+  <label>Sizes and Quantities</label>
+  <div id="size-quantity-list">
+    <div class="row mb-2">
+      <div class="col">
+        <input type="text" name="size[]" class="form-control" placeholder="Size (e.g. 2T)" required>
+      </div>
+      <div class="col">
+        <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" required>
+      </div>
+    </div>
   </div>
+  <button type="button" class="btn btn-outline-primary mb-3" onclick="addSizeField()">+ Add Another Size</button>
+
   <div class="mb-3">
     <label>Total Package Cost</label>
     <input type="number" name="total_cost" step="0.01" class="form-control" required>
@@ -24,4 +34,21 @@
   <button class="btn btn-primary">Add Product</button>
   <a href="/" class="btn btn-secondary">Cancel</a>
 </form>
+
+<script>
+function addSizeField() {
+  const container = document.getElementById('size-quantity-list');
+  const row = document.createElement('div');
+  row.className = 'row mb-2';
+  row.innerHTML = `
+    <div class="col">
+      <input type="text" name="size[]" class="form-control" placeholder="Size (e.g. 2T)" required>
+    </div>
+    <div class="col">
+      <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" required>
+    </div>
+  `;
+  container.appendChild(row);
+}
+</script>
 {% endblock %}

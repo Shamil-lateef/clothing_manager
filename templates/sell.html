@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<a href="/" class="btn btn-secondary mb-3">← Back to Product List</a>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<form method="POST">
+  <div class="mb-3">
+    <label>Select Product</label>
+    <select name="product_index" class="form-select" required>
+      {% for product in products %}
+        <option value="{{ loop.index0 }}">Product {{ loop.index }} – {{ product.style_url }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label>Select Size</label>
+    <select name="size" class="form-select" required>
+      {% for size in products[0].sizes.keys() %}
+        <option value="{{ size }}">{{ size }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <button class="btn btn-primary">Sell Item</button>
+</form>
+{% endblock %}
