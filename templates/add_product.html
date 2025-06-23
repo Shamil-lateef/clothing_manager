@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<form method="POST">
+  <div class="mb-3">
+    <label>Image URL</label>
+    <input type="url" name="image_url" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label>Style URL</label>
+    <input type="url" name="style_url" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label>Sizes and Quantities (e.g. 2T:5, 3T:3)</label>
+    <input type="text" name="sizes" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label>Total Package Cost</label>
+    <input type="number" name="total_cost" step="0.01" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label>Shipping Cost</label>
+    <input type="number" name="shipping_cost" step="0.01" class="form-control" required>
+  </div>
+  <button class="btn btn-primary">Add Product</button>
+  <a href="/" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

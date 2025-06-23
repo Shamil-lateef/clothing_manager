@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<a href="{{ url_for('add_product') }}" class="btn btn-success mb-3">+ Add New Product</a>
+<div class="row row-cols-1 row-cols-md-2 g-4">
+  {% for product in products %}
+  <div class="col">
+    <div class="card h-100">
+      <img src="{{ product.image_url }}" class="card-img-top" alt="Product Image">
+      <div class="card-body">
+        <h5 class="card-title"><a href="{{ product.style_url }}" target="_blank">View Style</a></h5>
+        <p><strong>Unit Cost:</strong> ${{ product.unit_cost }}</p>
+        <p><strong>Selling Price:</strong> ${{ product.selling_price }}</p>
+        <p><strong>Stock:</strong></p>
+        <ul>
+          {% for size, qty in product.sizes.items() %}
+            <li>{{ size }}: {{ qty }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
