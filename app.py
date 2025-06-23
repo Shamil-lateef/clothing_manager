@@ -1,13 +1,17 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from collections import defaultdict
 from flask_sqlalchemy import SQLAlchemy
+import os
 
 app = Flask(__name__)
 
 app.secret_key = "some-secret-key"  # needed for flash messages
 
 # SQLite database config
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///products.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"connect_args": {"sslmode": "require"}}
+
+
 db = SQLAlchemy(app)
 
 
