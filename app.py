@@ -37,8 +37,21 @@ with app.app_context():
 
 @app.route("/")
 def index():
+    low_stock_threshold = 3
     products = Product.query.all()
-    return render_template("index.html", products=products)
+
+    # Collect low stock items: list of dicts {product, size, quantity}
+    low_stock_items = []
+    for product in products:
+        for sq in product.sizes:
+            if sq.quantity <= low_stock_threshold:
+                low_stock_items.append(
+                    {"product": product, "size": sq.size, "quantity": sq.quantity}
+                )
+
+    return render_template(
+        "index.html", products=products, low_stock_items=low_stock_items
+    )
 
 
 @app.route("/add", methods=["GET", "POST"])
