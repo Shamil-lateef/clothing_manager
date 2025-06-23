@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block content %}
+<h3>Edit Product #{{ product.id }}</h3>
+<form method="POST">
+  <div class="mb-3">
+    <label>Image URL</label>
+    <input type="url" name="image_url" class="form-control" value="{{ product.image_url }}" required>
+  </div>
+  <div class="mb-3">
+    <label>Style URL</label>
+    <input type="url" name="style_url" class="form-control" value="{{ product.style_url }}" required>
+  </div>
+
+  <label>Sizes and Quantities</label>
+  <div id="size-quantity-list">
+    {% for sq in sizes %}
+    <div class="row mb-2">
+      <div class="col">
+        <input type="text" name="size[]" class="form-control" placeholder="Size (e.g. 2T)" value="{{ sq.size }}" required>
+      </div>
+      <div class="col">
+        <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" value="{{ sq.quantity }}" required>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <button type="button" class="btn btn-outline-primary mb-3" onclick="addSizeField()">+ Add Another Size</button>
+
+  <div class="mb-3">
+    <label>Total Package Cost</label>
+    <input type="number" name="total_cost" step="0.01" class="form-control" value="{{ product.total_cost }}" required>
+  </div>
+  <div class="mb-3">
+    <label>Shipping Cost</label>
+    <input type="number" name="shipping_cost" step="0.01" class="form-control" value="{{ product.shipping_cost }}" required>
+  </div>
+  <button class="btn btn-primary">Update Product</button>
+  <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+</form>
+
+<script>
+function addSizeField() {
+  const container = document.getElementById('size-quantity-list');
+  const row = document.createElement('div');
+  row.className = 'row mb-2';
+  row.innerHTML = `
+    <div class="col">
+      <input type="text" name="size[]" class="form-control" placeholder="Size (e.g. 2T)" required>
+    </div>
+    <div class="col">
+      <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" required>
+    </div>
+  `;
+  container.appendChild(row);
+}
+</script>
+{% endblock %}

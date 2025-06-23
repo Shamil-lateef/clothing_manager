@@ -129,5 +129,57 @@ def search_by_size():
     return render_template("search.html", results=results, size_query=size_query)
 
 
+@app.route("/edit/<int:product_id>", methods=["GET", "POST"])
+def edit_product(product_id):
+    product = Product.query.get_or_404(product_id)
+
+    if request.method == "POST":
+        product.image_url = request.form["image_url"]
+        product.style_url = request.form["style_url"]
+        total_cost = float(request.form["total_cost"])
+        shipping_cost = float(request.form["shipping_cost"])
+
+        size_list = request.form.getlist("size[]")
+        quantity_list = request.form.getlist("quantity[]")
+
+        sizes = {}
+        for s, q in zip(size_list, quantity_list):
+            sizes[s.strip()] = int(q.strip())
+
+        total_units = sum(sizes.values())
+        if total_units == 0:
+            flash("Total quantity must be greater than 0.", "danger")
+            return redirect(url_for("edit_product", product_id=product_id))
+
+        product.total_cost = total_cost
+        product.shipping_cost = shipping_cost
+        product.unit_cost = round((total_cost + shipping_cost) / total_units, 2)
+        product.selling_price = round(product.unit_cost * 1.5, 2)
+
+        # Remove old sizes
+        SizeQuantity.query.filter_by(product_id=product_id).delete()
+
+        # Add new sizes
+        for size, qty in sizes.items():
+            db.session.add(SizeQuantity(size=size, quantity=qty, product_id=product.id))
+
+        db.session.commit()
+        flash("Product updated successfully!", "success")
+        return redirect(url_for("index"))
+
+    # GET: pre-fill form with existing data
+    sizes = product.sizes
+    return render_template("edit_product.html", product=product, sizes=sizes)
+
+
+@app.route("/delete/<int:product_id>", methods=["POST"])
+def delete_product(product_id):
+    product = Product.query.get_or_404(product_id)
+    db.session.delete(product)
+    db.session.commit()
+    flash("Product deleted successfully!", "success")
+    return redirect(url_for("index"))
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)

@@ -20,6 +20,12 @@
               <li>{{ sq.size }}: {{ sq.quantity }}</li>
             {% endfor %}
           </ul>
+          <a href="{{ url_for('edit_product', product_id=product.id) }}" class="btn btn-sm btn-warning me-2">Edit</a>
+
+            <form action="{{ url_for('delete_product', product_id=product.id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('Are you sure?');">
+            <button class="btn btn-sm btn-danger">Delete</button>
+            </form>
+
         </div>
       </div>
     </div>
