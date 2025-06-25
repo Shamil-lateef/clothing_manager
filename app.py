@@ -1,7 +1,15 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, Response
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_bcrypt import Bcrypt
+
+import csv
+from io import StringIO
 from collections import defaultdict
 from flask_sqlalchemy import SQLAlchemy
 import os
+from datetime import datetime
+from sqlalchemy import func
+
 
 app = Flask(__name__)
 
@@ -13,6 +21,17 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"connect_args": {"sslmode": "require"
 
 
 db = SQLAlchemy(app)
+
+
+login_manager = LoginManager(app)
+login_manager.login_view = "login"
+
+bcrypt = Bcrypt(app)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 
 # Define models
@@ -32,6 +51,24 @@ class SizeQuantity(db.Model):
     size = db.Column(db.String(50))
     quantity = db.Column(db.Integer)
     product_id = db.Column(db.Integer, db.ForeignKey("product.id"))
+
+class Sale(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    size = db.Column(db.String(50))
+    quantity = db.Column(db.Integer)
+    selling_price = db.Column(db.Float)
+    unit_cost = db.Column(db.Float)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(150), nullable=False)
+
+    def check_password(self, password):
+        return bcrypt.check_password_hash(self.password_hash, password)
 
 
 # Create database tables
@@ -59,6 +96,7 @@ def index():
 
 
 @app.route("/add", methods=["GET", "POST"])
+@login_required
 def add_product():
     if request.method == "POST":
         image_url = request.form["image_url"]
@@ -104,6 +142,7 @@ def add_product():
 
 
 @app.route("/sell", methods=["GET", "POST"])
+@login_required
 def sell_product():
     if request.method == "POST":
         product_id = int(request.form["product_id"])
@@ -147,6 +186,7 @@ def search_by_size():
 
 
 @app.route("/edit/<int:product_id>", methods=["GET", "POST"])
+@login_required
 def edit_product(product_id):
     product = Product.query.get_or_404(product_id)
 
@@ -190,12 +230,107 @@ def edit_product(product_id):
 
 
 @app.route("/delete/<int:product_id>", methods=["POST"])
+@login_required
 def delete_product(product_id):
     product = Product.query.get_or_404(product_id)
     db.session.delete(product)
     db.session.commit()
     flash("Product deleted successfully!", "success")
     return redirect(url_for("index"))
+
+
+@app.route("/export")
+@login_required
+def export_sales():
+    sales = Sale.query.order_by(Sale.timestamp.desc()).all()
+
+    # Create CSV in memory
+    si = StringIO()
+    writer = csv.writer(si)
+    writer.writerow(['Date', 'Product ID', 'Size', 'Quantity', 'Selling Price', 'Unit Cost', 'Profit'])
+
+    for sale in sales:
+        writer.writerow([
+            sale.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            sale.product_id,
+            sale.size,
+            sale.quantity,
+            sale.selling_price,
+            sale.unit_cost,
+            round(sale.selling_price - sale.unit_cost, 2)
+        ])
+
+    output = si.getvalue()
+    si.close()
+
+    return Response(
+        output,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment;filename=sales_report.csv"}
+    )
+
+
+@app.route("/report", methods=["GET", "POST"])
+@login_required
+def report():
+    start_date = None
+    end_date = None
+    sales = []
+
+    if request.method == "POST":
+        start_date_str = request.form["start_date"]
+        end_date_str = request.form["end_date"]
+
+        if start_date_str and end_date_str:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+
+            sales = (
+                db.session.query(
+                    Product,
+                    func.count(Sale.id).label("items_sold"),
+                    func.sum(Sale.selling_price).label("total_revenue"),
+                    func.sum(Sale.unit_cost).label("total_cost"),
+                )
+                .join(Sale)
+                .filter(Sale.timestamp >= start_date, Sale.timestamp <= end_date)
+                .group_by(Product.id)
+                .all()
+            )
+
+    return render_template(
+        "report.html", sales=sales, start_date=start_date, end_date=end_date
+    )
+
+
+@app.route("/create-admin")
+def create_admin():
+    if User.query.filter_by(username="admin").first():
+        return "Admin already exists."
+    hashed_pw = bcrypt.generate_password_hash("admin123").decode("utf-8")
+    user = User(username="admin", password_hash=hashed_pw)
+    db.session.add(user)
+    db.session.commit()
+    return "Admin user created. You can now log in at /login"
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        user = User.query.filter_by(username=request.form["username"]).first()
+        if user and user.check_password(request.form["password"]):
+            login_user(user)
+            return redirect(url_for("index"))
+        else:
+            flash("Invalid credentials", "danger")
+    return render_template("login.html")
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
 
 
 if __name__ == "__main__":

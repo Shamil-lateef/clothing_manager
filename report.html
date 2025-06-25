@@ -1,0 +1,16 @@
+<form method="POST" class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+      <label class="form-label">Start Date</label>
+      <input type="date" name="start_date" class="form-control" required>
+    </div>
+    <div class="col-auto">
+      <label class="form-label">End Date</label>
+      <input type="date" name="end_date" class="form-control" required>
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-primary">Filter</button>
+    </div>
+  </form>
+{% if start_date and end_date %}
+  <h5>Sales from {{ start_date.date() }} to {{ end_date.date() }}</h5>
+{% endif %}
