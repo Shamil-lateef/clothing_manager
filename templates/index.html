@@ -19,7 +19,7 @@
           <ul>
             {% for sq in product.sizes %}
               <li {% if sq.quantity <= 1 %} style="color: red; font-weight: bold;" {% endif %}>
-                Size {{ sq.size }}: {{ sq.quantity }} sets available
+                Size {{ sq.size }}:   {{ sq.quantity }}   sets available
                 {% if sq.quantity <= 1 %} ⚠️ Low Stock {% endif %}
               </li>
             {% endfor %}

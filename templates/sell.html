@@ -13,14 +13,18 @@
 <form method="POST">
   <div class="mb-3">
     <label>Select Product</label>
-    <select name="product_id" class="form-select" required onchange="updateSizes(this)">
-      <option value="">-- Select a product --</option>
+    <select name="product_id" id="productSelect" class="form-select" onchange="updateSizes(this)">
+      <option value="" selected disabled>Select a product</option>
       {% for product in products %}
-        <option value="{{ product.id }}" data-sizes="{% for sq in product.sizes %}{{ sq.size }}{% if not loop.last %},{% endif %}{% endfor %}">
-          Product #{{ product.id }} – {{ product.style_url }}
+        <option value="{{ product.id }}" data-image="{{ product.image_url }}">
+          Product #{{ product.id }} - ${{ "%.2f"|format(product.selling_price) }}
         </option>
       {% endfor %}
     </select>
+    <div class="mt-3">
+      <img id="productImage" src="" class="img-fluid rounded" style="max-height: 250px; display: none;" alt="Selected product image">
+    </div>
+        
   </div>
 
   <div class="mb-3">
@@ -50,4 +54,20 @@ function updateSizes(selectElement) {
   }
 }
 </script>
+
+<script>
+  document.getElementById('productSelect').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const imageUrl = selectedOption.getAttribute('data-image');
+    const imageEl = document.getElementById('productImage');
+  
+    if (imageUrl) {
+      imageEl.src = imageUrl;
+      imageEl.style.display = 'block';
+    } else {
+      imageEl.style.display = 'none';
+    }
+  });
+  </script>
+  
 {% endblock %}
