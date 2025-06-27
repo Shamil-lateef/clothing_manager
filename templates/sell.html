@@ -20,7 +20,7 @@
         {% for product in products %}
           <option 
             value="{{ product.id }}" 
-            data-sizes="{{ ','.join([sq.size for sq in product.sizes]) }}" 
+            data-sizes="{{ product.sizes | map(attribute='size') | join(',') }}"
             data-image="{{ product.image_url }}"
           >
             Product #{{ product.id }} — ${{ "%.2f"|format(product.selling_price) }}
