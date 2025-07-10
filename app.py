@@ -125,8 +125,8 @@ def add_product():
             flash("Total quantity must be greater than 0.", "danger")
             return redirect(url_for("add_product"))
 
-        unit_cost = round((total_cost + shipping_cost) / total_units, 2)
-        selling_price = round(unit_cost * 1.5, 2)
+        unit_cost = round((total_cost + shipping_cost) / total_units, 1)
+        selling_price = round(unit_cost + 5000, 1)
 
         # Save product to DB
         product = Product(
@@ -156,18 +156,18 @@ def sell_product():
     if request.method == "POST":
         product_id = int(request.form["product_id"])
         size = request.form["size"]
+        quantity = int(request.form["quantity"])  # ✅ Read the actual quantity
 
-        # Get size record
         size_entry = SizeQuantity.query.filter_by(
             product_id=product_id, size=size
         ).first()
 
-        if size_entry and size_entry.quantity > 0:
-            size_entry.quantity -= 1
+        if size_entry and size_entry.quantity >= quantity:
+            size_entry.quantity -= quantity
             db.session.commit()
-            flash(f"Sold 1 unit of size {size}.", "success")
+            flash(f"Sold {quantity} unit(s) of size {size}.", "success")
         else:
-            flash(f"Size '{size}' is out of stock!", "danger")
+            flash(f"Not enough stock for size '{size}'!", "danger")
 
         return redirect(url_for("sell_product"))
 
