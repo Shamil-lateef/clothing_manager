@@ -13,7 +13,7 @@
 
         <div class="card-body">
           <h5 class="card-title"><a href="{{ product.style_url }}" target="_blank">View Style</a></h5>
-          <p><strong>Price:</strong> IQD{{ product.selling_price }}</p>
+          <p><strong>Price:</strong> {{ product.selling_price }} IQD</p>
           <p><strong>Stock:</strong></p>
           <ul>
             {% for sq in product.sizes %}

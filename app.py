@@ -127,9 +127,11 @@ def add_product():
         total_cost = total_cost * 1400  # Convert to IQD
         shipping_cost = shipping_cost * 1400  # Convert to IQD
 
-        unit_cost = round((total_cost + shipping_cost) / total_units, 1)
-        
-        selling_price = round((unit_cost + 5000)/ 1000) * 1000  # Round to nearest 1000 IQD
+        unit_cost = (total_cost + shipping_cost) / total_units
+
+        selling_price = (
+            round((unit_cost + 7000) / 1000) * 1000
+        )  # Round to nearest 1000 IQD
 
         # Save product to DB
         product = Product(
