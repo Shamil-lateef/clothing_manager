@@ -22,64 +22,29 @@
             value="{{ product.id }}" 
             data-sizes="{{ product.sizes | map(attribute='size') | join(',') }}"
             data-image="{{ product.image_url }}"
+            data-style="{{ product.style_url }}"
           >
-            Product #{{ product.id }} — ${{ "%.2f"|format(product.selling_price) }}
+            #{{ product.id }} - {% if product.image_url %}<img src="{{ product.image_url }}" class="dropdown-img me-2">{% endif %}
           </option>
         {% endfor %}
       </select>
     </div>
 
-    <div class="mb-3">
-      <label for="sizeDropdown" class="form-label">Select Size</label>
-      <select name="size" id="sizeDropdown" class="form-select" required>
-        <option value="">-- Select a size --</option>
-      </select>
-    </div>
-
-    <div class="mb-3">
-      <label for="quantity" class="form-label">Quantity</label>
-      <input type="number" class="form-control" name="quantity" id="quantity" min="1" required>
-    </div>
-
-    <div class="mb-3">
-      <img id="productImage" src="" alt="Selected Product Image" class="img-fluid rounded" style="max-height: 250px; display: none;">
-    </div>
-
-    <button type="submit" class="btn btn-primary">Sell</button>
+    <!-- ... rest of the form ... -->
   </form>
 </div>
 
-<!-- Scripts -->
-<script>
-  // Update size dropdown based on selected product
-  function updateSizes(selectElement) {
-    const selectedOption = selectElement.options[selectElement.selectedIndex];
-    const sizeDropdown = document.getElementById('sizeDropdown');
-    sizeDropdown.innerHTML = '<option value="">-- Select a size --</option>';
-
-    if (selectedOption && selectedOption.dataset.sizes) {
-      const sizes = selectedOption.dataset.sizes.split(',');
-      for (const size of sizes) {
-        const option = document.createElement('option');
-        option.value = size;
-        option.text = size;
-        sizeDropdown.appendChild(option);
-      }
-    }
+<style>
+  .dropdown-img {
+    width: 30px;
+    height: 30px;
+    object-fit: cover;
+    border-radius: 4px;
+    vertical-align: middle;
   }
+</style>
 
-  // Update product image on selection
-  document.getElementById('productSelect').addEventListener('change', function () {
-    const selectedOption = this.options[this.selectedIndex];
-    const imageUrl = selectedOption.getAttribute('data-image');
-    const imageEl = document.getElementById('productImage');
-
-    if (imageUrl) {
-      imageEl.src = imageUrl;
-      imageEl.style.display = 'block';
-    } else {
-      imageEl.style.display = 'none';
-    }
-  });
+<script>
+  // ... existing JavaScript code ...
 </script>
 {% endblock %}

@@ -124,9 +124,12 @@ def add_product():
         if total_units == 0:
             flash("Total quantity must be greater than 0.", "danger")
             return redirect(url_for("add_product"))
+        total_cost = total_cost * 1400  # Convert to IQD
+        shipping_cost = shipping_cost * 1400  # Convert to IQD
 
         unit_cost = round((total_cost + shipping_cost) / total_units, 1)
-        selling_price = round(unit_cost + 5000, 1)
+        
+        selling_price = round((unit_cost + 5000)/ 1000) * 1000  # Round to nearest 1000 IQD
 
         # Save product to DB
         product = Product(

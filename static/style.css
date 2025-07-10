@@ -71,4 +71,19 @@ body {
     color: #dc3545;
     font-weight: bold;
   }
-  
+
+
+
+select option img {
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+.dropdown-img {
+  width: 30px;
+  height: 30px;
+  object-fit: cover;
+  border-radius: 4px;
+  vertical-align: middle;
+  margin-right: 8px;
+}

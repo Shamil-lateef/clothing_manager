@@ -13,7 +13,7 @@
 
         <div class="card-body">
           <h5 class="card-title"><a href="{{ product.style_url }}" target="_blank">View Style</a></h5>
-          <p><strong>Selling Price:</strong> IQD{{ product.selling_price }}</p>
+          <p><strong>Price:</strong> IQD{{ product.selling_price }}</p>
           <p><strong>Stock:</strong></p>
           <ul>
             {% for sq in product.sizes %}
@@ -24,19 +24,6 @@
             {% endfor %}
           </ul>
           
-          {% if low_stock_items %}
-            <div class="alert alert-warning">
-                <h5>⚠️ Low Stock Alerts:</h5>
-                <ul>
-                {% for item in low_stock_items %}
-                    <li>
-                    Product #{{ item.product.id }} — Size: {{ item.size }} (Only {{ item.quantity }} left)
-                    </li>
-                {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-
           <a href="{{ url_for('edit_product', product_id=product.id) }}" class="btn btn-sm btn-warning me-2">Edit</a>
 
             <form action="{{ url_for('delete_product', product_id=product.id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('Are you sure?');">
