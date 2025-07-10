@@ -14,37 +14,104 @@
 
   <form method="POST">
     <div class="mb-3">
-      <label for="productSelect" class="form-label">Select Product</label>
-      <select name="product_id" id="productSelect" class="form-select" onchange="updateSizes(this)" required>
-        <option value="" disabled selected>-- Choose a product --</option>
+      <label class="form-label">Select Product</label>
+      <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 mb-3">
         {% for product in products %}
-          <option 
-            value="{{ product.id }}" 
-            data-sizes="{{ product.sizes | map(attribute='size') | join(',') }}"
-            data-image="{{ product.image_url }}"
-            data-style="{{ product.style_url }}"
-          >
-            #{{ product.id }} - {% if product.image_url %}<img src="{{ product.image_url }}" class="dropdown-img me-2">{% endif %}
-          </option>
+          <div class="col">
+            <div class="card h-100 product-card" 
+                 data-id="{{ product.id }}"
+                 data-sizes="{{ product.sizes | map(attribute='size') | join(',') }}"
+                 onclick="selectProduct(this)">
+              <img src="{{ product.image_url }}" class="card-img-top" alt="Product Image">
+              <div class="card-body p-2 text-center">
+                <span class="badge bg-secondary">#{{ product.id }}</span>
+              </div>
+            </div>
+          </div>
         {% endfor %}
+      </div>
+      <input type="hidden" name="product_id" id="selectedProductId" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="sizeDropdown" class="form-label">Select Size</label>
+      <select name="size" id="sizeDropdown" class="form-select" required>
+        <option value="" disabled selected>-- Select a size --</option>
       </select>
     </div>
 
-    <!-- ... rest of the form ... -->
+    <div class="mb-3">
+      <label for="quantity" class="form-label">Quantity</label>
+      <input type="number" class="form-control" name="quantity" id="quantity" min="1" required>
+    </div>
+
+    <div class="mb-3">
+      <img id="productImage" src="" alt="Selected Product Image" class="img-fluid rounded" style="max-height: 250px; display: none;">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Sell</button>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
   </form>
 </div>
 
 <style>
-  .dropdown-img {
-    width: 30px;
-    height: 30px;
-    object-fit: cover;
-    border-radius: 4px;
-    vertical-align: middle;
+  .product-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+  }
+  .product-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  }
+  .product-card.selected {
+    border: 3px solid #0d6efd;
+    box-shadow: 0 0 10px rgba(13, 110, 253, 0.3);
+    transform: translateY(-3px);
+  }
+  .product-card img {
+    height: 120px;
+    object-fit: contain;
+    padding: 5px;
+  }
+  .product-card .card-body {
+    padding: 5px;
   }
 </style>
 
 <script>
-  // ... existing JavaScript code ...
+  function selectProduct(card) {
+    // Remove selection from all cards
+    document.querySelectorAll('.product-card').forEach(c => {
+      c.classList.remove('selected');
+    });
+    
+    // Add selection to clicked card
+    card.classList.add('selected');
+    
+    // Set product ID
+    const productId = card.getAttribute('data-id');
+    document.getElementById('selectedProductId').value = productId;
+    
+    // Update size dropdown
+    const sizes = card.getAttribute('data-sizes').split(',');
+    const sizeDropdown = document.getElementById('sizeDropdown');
+    sizeDropdown.innerHTML = '<option value="" disabled selected>-- Select a size --</option>';
+    
+    sizes.forEach(size => {
+      const option = document.createElement('option');
+      option.value = size;
+      option.textContent = size;
+      sizeDropdown.appendChild(option);
+    });
+    
+    // Show product image
+    const img = card.querySelector('img');
+    if (img) {
+      const preview = document.getElementById('productImage');
+      preview.src = img.src;
+      preview.style.display = 'block';
+    }
+  }
 </script>
 {% endblock %}
