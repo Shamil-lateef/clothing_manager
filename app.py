@@ -1,5 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, Response
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    login_user,
+    logout_user,
+    login_required,
+    current_user,
+)
 from flask_bcrypt import Bcrypt
 
 import csv
@@ -52,9 +59,10 @@ class SizeQuantity(db.Model):
     quantity = db.Column(db.Integer)
     product_id = db.Column(db.Integer, db.ForeignKey("product.id"))
 
+
 class Sale(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    product_id = db.Column(db.Integer, db.ForeignKey("product.id"))
     size = db.Column(db.String(50))
     quantity = db.Column(db.Integer)
     selling_price = db.Column(db.Float)
@@ -77,6 +85,7 @@ with app.app_context():
 
 
 @app.route("/")
+@login_required
 def index():
     low_stock_threshold = 1
     products = Product.query.all()
@@ -247,18 +256,30 @@ def export_sales():
     # Create CSV in memory
     si = StringIO()
     writer = csv.writer(si)
-    writer.writerow(['Date', 'Product ID', 'Size', 'Quantity', 'Selling Price', 'Unit Cost', 'Profit'])
+    writer.writerow(
+        [
+            "Date",
+            "Product ID",
+            "Size",
+            "Quantity",
+            "Selling Price",
+            "Unit Cost",
+            "Profit",
+        ]
+    )
 
     for sale in sales:
-        writer.writerow([
-            sale.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-            sale.product_id,
-            sale.size,
-            sale.quantity,
-            sale.selling_price,
-            sale.unit_cost,
-            round(sale.selling_price - sale.unit_cost, 2)
-        ])
+        writer.writerow(
+            [
+                sale.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                sale.product_id,
+                sale.size,
+                sale.quantity,
+                sale.selling_price,
+                sale.unit_cost,
+                round(sale.selling_price - sale.unit_cost, 2),
+            ]
+        )
 
     output = si.getvalue()
     si.close()
@@ -266,7 +287,7 @@ def export_sales():
     return Response(
         output,
         mimetype="text/csv",
-        headers={"Content-Disposition": "attachment;filename=sales_report.csv"}
+        headers={"Content-Disposition": "attachment;filename=sales_report.csv"},
     )
 
 
