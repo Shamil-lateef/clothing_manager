@@ -22,8 +22,19 @@ app = Flask(__name__)
 app.secret_key = "some-secret-key"  # needed for flash messages
 
 # SQLite database config
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"connect_args": {"sslmode": "require"}}
+# Database configuration - works for both local development and production
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    # Production (Render/Heroku) - PostgreSQL
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"connect_args": {"sslmode": "require"}}
+else:
+    # Local development - SQLite
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///zuzi_store.db"
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {}
+
+# Optional: Disable SQLAlchemy modification tracking for better performance
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 
 db = SQLAlchemy(app)
