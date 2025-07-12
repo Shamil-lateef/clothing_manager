@@ -6,7 +6,7 @@ services:
     startCommand: "python app.py"
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11
+        value: 3.13
       - key: FLASK_APP
         value: app.py
       - key: FLASK_ENV
