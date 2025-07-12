@@ -23,7 +23,6 @@ app = Flask(__name__)
 
 app.secret_key = "some-secret-key"  # needed for flash messages
 
-# SQLite database config
 # Database configuration - works for both local development and production
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
@@ -97,9 +96,7 @@ class User(UserMixin, db.Model):
         return self.role == "admin"
 
 
-# Create database tables
-with app.app_context():
-    db.create_all()
+# REMOVED: db.create_all() - Let Flask-Migrate handle database creation
 
 
 def admin_required(f):
@@ -370,10 +367,6 @@ def edit_product(product_id):
         total_cost_usd=total_cost_usd,
         shipping_cost_usd=shipping_cost_usd,
     )
-
-    # GET: pre-fill form with existing data
-    sizes = product.sizes
-    return render_template("edit_product.html", product=product, sizes=sizes)
 
 
 @app.route("/delete/<int:product_id>", methods=["POST"])
