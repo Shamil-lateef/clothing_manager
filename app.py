@@ -16,6 +16,8 @@ from flask_sqlalchemy import SQLAlchemy
 import os
 from datetime import datetime, timedelta
 from sqlalchemy import func, desc
+from functools import wraps
+
 
 app = Flask(__name__)
 
@@ -84,9 +86,13 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(150), nullable=False)
+    role = db.Column(db.String(50), default="employee")
 
     def check_password(self, password):
         return bcrypt.check_password_hash(self.password_hash, password)
+
+    def is_admin(self):
+        return self.role == "admin"
 
 
 # Create database tables
@@ -94,6 +100,18 @@ with app.app_context():
     db.create_all()
 
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin():
+            flash("Access denied. Admin privileges required.", "danger")
+            return redirect(url_for("index"))
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+# Routes
 @app.route("/")
 @login_required
 def index():
@@ -114,8 +132,70 @@ def index():
     )
 
 
+# 3. Update the create-admin route to set the admin role:
+@app.route("/create-admin")
+def create_admin():
+    if User.query.filter_by(username="admin").first():
+        return "Admin already exists."
+    hashed_pw = bcrypt.generate_password_hash("admin123").decode("utf-8")
+    user = User(username="admin", password_hash=hashed_pw, role="admin")
+    db.session.add(user)
+    db.session.commit()
+    return "Admin user created. You can now log in at /login"
+
+
+# 4. Add a route to create employee accounts (admin only):
+@app.route("/create-employee", methods=["GET", "POST"])
+@login_required
+@admin_required
+def create_employee():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+
+        # Check if username already exists
+        if User.query.filter_by(username=username).first():
+            flash("Username already exists!", "danger")
+            return redirect(url_for("create_employee"))
+
+        hashed_pw = bcrypt.generate_password_hash(password).decode("utf-8")
+        user = User(username=username, password_hash=hashed_pw, role="employee")
+        db.session.add(user)
+        db.session.commit()
+        flash(f"Employee account '{username}' created successfully!", "success")
+        return redirect(url_for("manage_users"))
+
+    return render_template("create_employee.html")
+
+
+# 5. Add a route to manage users (admin only):
+@app.route("/manage-users")
+@login_required
+@admin_required
+def manage_users():
+    users = User.query.all()
+    return render_template("manage_users.html", users=users)
+
+
+# 6. Add a route to delete users (admin only):
+@app.route("/delete-user/<int:user_id>", methods=["POST"])
+@login_required
+@admin_required
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.role == "admin" and User.query.filter_by(role="admin").count() == 1:
+        flash("Cannot delete the last admin user!", "danger")
+        return redirect(url_for("manage_users"))
+
+    db.session.delete(user)
+    db.session.commit()
+    flash(f"User '{user.username}' deleted successfully!", "success")
+    return redirect(url_for("manage_users"))
+
+
 @app.route("/add", methods=["GET", "POST"])
 @login_required
+@admin_required
 def add_product():
     if request.method == "POST":
         image_url = request.form["image_url"]
@@ -225,6 +305,7 @@ def search_by_size():
 
 @app.route("/edit/<int:product_id>", methods=["GET", "POST"])
 @login_required
+@admin_required
 def edit_product(product_id):
     product = Product.query.get_or_404(product_id)
 
@@ -295,6 +376,7 @@ def edit_product(product_id):
 
 @app.route("/delete/<int:product_id>", methods=["POST"])
 @login_required
+@admin_required
 def delete_product(product_id):
     product = Product.query.get_or_404(product_id)
     db.session.delete(product)
@@ -305,6 +387,7 @@ def delete_product(product_id):
 
 @app.route("/export")
 @login_required
+@admin_required
 def export_sales():
     sales = Sale.query.order_by(Sale.timestamp.desc()).all()
 
@@ -348,6 +431,7 @@ def export_sales():
 
 @app.route("/report", methods=["GET", "POST"])
 @login_required
+@admin_required
 def report():
     # Default to last 30 days
     end_date = datetime.now()
@@ -477,6 +561,7 @@ def report():
 
 @app.route("/export_detailed_report")
 @login_required
+@admin_required
 def export_detailed_report():
     # Get date range from query parameters
     start_date_str = request.args.get("start_date")
