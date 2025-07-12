@@ -3,5 +3,6 @@ Flask-SQLAlchemy
 psycopg2-binary
 flask-login
 flask-bcrypt
+Flask-Migrate==4.0.5
 
 

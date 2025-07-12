@@ -8,7 +8,7 @@ from flask_login import (
     current_user,
 )
 from flask_bcrypt import Bcrypt
-
+from flask_migrate import Migrate
 import csv
 from io import StringIO
 from collections import defaultdict
@@ -40,6 +40,8 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 
 db = SQLAlchemy(app)
+
+migrate = Migrate(app, db)
 
 
 login_manager = LoginManager(app)
