@@ -129,7 +129,7 @@ def add_product():
 
         unit_cost = (total_cost + shipping_cost) / total_units
 
-        selling_price = (
+        selling_price = int(
             round((unit_cost + 7000) / 1000) * 1000
         )  # Round to nearest 1000 IQD
 
@@ -207,8 +207,10 @@ def edit_product(product_id):
     if request.method == "POST":
         product.image_url = request.form["image_url"]
         product.style_url = request.form["style_url"]
-        total_cost = float(request.form["total_cost"])
-        shipping_cost = float(request.form["shipping_cost"])
+
+        # Get costs in USD (user input)
+        total_cost_usd = float(request.form["total_cost"])
+        shipping_cost_usd = float(request.form["shipping_cost"])
 
         size_list = request.form.getlist("size[]")
         quantity_list = request.form.getlist("quantity[]")
@@ -222,10 +224,21 @@ def edit_product(product_id):
             flash("Total quantity must be greater than 0.", "danger")
             return redirect(url_for("edit_product", product_id=product_id))
 
-        product.total_cost = total_cost
-        product.shipping_cost = shipping_cost
-        product.unit_cost = round((total_cost + shipping_cost) / total_units, 2)
-        product.selling_price = round(product.unit_cost * 1.5, 2)
+        # Convert USD to IQD (same as add_product)
+        total_cost_iqd = total_cost_usd * 1400
+        shipping_cost_iqd = shipping_cost_usd * 1400
+
+        # Calculate unit cost and selling price in IQD
+        unit_cost = (total_cost_iqd + shipping_cost_iqd) / total_units
+        selling_price = (
+            round((unit_cost + 7000) / 1000) * 1000
+        )  # Round to nearest 1000 IQD
+
+        # Update product with IQD values
+        product.total_cost = total_cost_iqd
+        product.shipping_cost = shipping_cost_iqd
+        product.unit_cost = unit_cost
+        product.selling_price = selling_price
 
         # Remove old sizes
         SizeQuantity.query.filter_by(product_id=product_id).delete()
@@ -237,6 +250,19 @@ def edit_product(product_id):
         db.session.commit()
         flash("Product updated successfully!", "success")
         return redirect(url_for("index"))
+
+    # GET: Convert IQD back to USD for form display
+    total_cost_usd = product.total_cost / 1400 if product.total_cost else 0
+    shipping_cost_usd = product.shipping_cost / 1400 if product.shipping_cost else 0
+
+    sizes = product.sizes
+    return render_template(
+        "edit_product.html",
+        product=product,
+        sizes=sizes,
+        total_cost_usd=total_cost_usd,
+        shipping_cost_usd=shipping_cost_usd,
+    )
 
     # GET: pre-fill form with existing data
     sizes = product.sizes

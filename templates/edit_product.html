@@ -27,13 +27,24 @@
   <button type="button" class="btn btn-outline-primary mb-3" onclick="addSizeField()">+ Add Another Size</button>
 
   <div class="mb-3">
-    <label>Total Package Cost</label>
-    <input type="number" name="total_cost" step="0.01" class="form-control" value="{{ product.total_cost }}" required>
+    <label>Total Package Cost (USD)</label>
+    <input type="number" name="total_cost" step="0.01" class="form-control" value="{{ '%.2f'|format(total_cost_usd) }}" required>
+    <small class="form-text text-muted">Current value in IQD: {{ '%.0f'|format(product.total_cost) }}</small>
   </div>
   <div class="mb-3">
-    <label>Shipping Cost</label>
-    <input type="number" name="shipping_cost" step="0.01" class="form-control" value="{{ product.shipping_cost }}" required>
+    <label>Shipping Cost (USD)</label>
+    <input type="number" name="shipping_cost" step="0.01" class="form-control" value="{{ '%.2f'|format(shipping_cost_usd) }}" required>
+    <small class="form-text text-muted">Current value in IQD: {{ '%.0f'|format(product.shipping_cost) }}</small>
   </div>
+  
+  <div class="mb-3">
+    <div class="alert alert-info">
+      <strong>Current Pricing:</strong><br>
+      Unit Cost: {{ '%.0f'|format(product.unit_cost) }} IQD<br>
+      Selling Price: {{ '%.0f'|format(product.selling_price) }} IQD
+    </div>
+  </div>
+  
   <button class="btn btn-primary">Update Product</button>
   <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
 </form>
