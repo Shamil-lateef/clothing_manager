@@ -18,6 +18,11 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, desc
 from functools import wraps
 
+import sys
+
+if sys.version_info >= (3, 13):
+    raise RuntimeError("Python 3.13 is not supported. Use Python 3.11 instead.")
+
 
 app = Flask(__name__)
 
