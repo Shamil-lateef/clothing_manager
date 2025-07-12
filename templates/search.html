@@ -20,8 +20,7 @@
           <div class="card-body">
             <h5 class="card-title"><a href="{{ product.style_url }}" target="_blank">View Style</a></h5>
             <p><strong>Available ({{ size.size }}):</strong> {{ size.quantity }}</p>
-            <p><strong>Unit Cost:</strong> ${{ product.unit_cost }}</p>
-            <p><strong>Selling Price:</strong> ${{ product.selling_price }}</p>
+            <p><strong>Selling Price:</strong> {{ product.selling_price|int }} IQD</p>
           </div>
         </div>
       </div>

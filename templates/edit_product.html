@@ -41,7 +41,7 @@
     <div class="alert alert-info">
       <strong>Current Pricing:</strong><br>
       Unit Cost: {{ '%.0f'|format(product.unit_cost) }} IQD<br>
-      Selling Price: {{ '%.0f'|format(product.selling_price) }} IQD
+      Selling Price: {{ product.selling_price|int }} IQD
     </div>
   </div>
   

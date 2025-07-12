@@ -1,10 +1,22 @@
 {% extends 'base.html' %}
 {% block content %}
-<a href="{{ url_for('search_by_size') }}" class="btn btn-info mb-3">🔍 Search by Size</a>
+<div class="mb-4">
+  <div class="row g-2">
+    <div class="col-md-3">
+      <a href="{{ url_for('search_by_size') }}" class="btn btn-info w-100">🔍 Search by Size</a>
+    </div>
+    <div class="col-md-3">
+      <a href="{{ url_for('sell_product') }}" class="btn btn-warning w-100">💰 Sell Product</a>
+    </div>
+    <div class="col-md-3">
+      <a href="{{ url_for('add_product') }}" class="btn btn-success w-100">➕ Add Product</a>
+    </div>
+    <div class="col-md-3">
+      <a href="{{ url_for('report') }}" class="btn btn-primary w-100">📊 Reports</a>
+    </div>
+  </div>
+</div>
 
-<a href="{{ url_for('sell_product') }}" class="btn btn-warning mb-3">Sell a Product</a>
-
-<a href="{{ url_for('add_product') }}" class="btn btn-success mb-3">+ Add New Product</a>
 <div class="row row-cols-1 row-cols-md-2 g-4">
     {% for product in products %}
     <div class="col">
@@ -13,7 +25,7 @@
 
         <div class="card-body">
           <h5 class="card-title"><a href="{{ product.style_url }}" target="_blank">View Style</a></h5>
-          <p><strong>Price:</strong> {{ product.selling_price }} IQD</p>
+          <p><strong>Price:</strong> {{ product.selling_price|int }} IQD</p>
           <p><strong>Stock:</strong></p>
           <ul>
             {% for sq in product.sizes %}
@@ -34,10 +46,5 @@
       </div>
     </div>
   {% endfor %}
-  
-        </ul>
-      </div>
-    </div>
-  </div>
 </div>
 {% endblock %}

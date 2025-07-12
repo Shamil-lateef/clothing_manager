@@ -1,16 +1,335 @@
-<form method="POST" class="row g-2 align-items-end mb-4">
-    <div class="col-auto">
-      <label class="form-label">Start Date</label>
-      <input type="date" name="start_date" class="form-control" required>
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>📊 Business Analytics & Reports</h3>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">← Back to Home</a>
+  </div>
+
+  <!-- Date Range Filter -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">📅 Report Period</h5>
     </div>
-    <div class="col-auto">
-      <label class="form-label">End Date</label>
-      <input type="date" name="end_date" class="form-control" required>
+    <div class="card-body">
+      <form method="POST" class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Start Date</label>
+          <input type="date" name="start_date" class="form-control" 
+                 value="{{ start_date.strftime('%Y-%m-%d') }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">End Date</label>
+          <input type="date" name="end_date" class="form-control" 
+                 value="{{ end_date.strftime('%Y-%m-%d') }}" required>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <button class="btn btn-primary me-2">Update Report</button>
+          <a href="{{ url_for('export_detailed_report', start_date=start_date.strftime('%Y-%m-%d'), end_date=end_date.strftime('%Y-%m-%d')) }}" 
+             class="btn btn-success">📥 Export CSV</a>
+        </div>
+      </form>
     </div>
-    <div class="col-auto">
-      <button class="btn btn-primary">Filter</button>
+  </div>
+
+  <!-- Sales Summary -->
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">💰 Sales Summary</h5>
     </div>
-  </form>
-{% if start_date and end_date %}
-  <h5>Sales from {{ start_date.date() }} to {{ end_date.date() }}</h5>
-{% endif %}
+    <div class="card-body">
+      <div class="row text-center">
+        <div class="col-md-2">
+          <div class="border p-3 rounded">
+            <h4 class="text-primary">{{ sales_summary.total_sales or 0 }}</h4>
+            <small>Total Sales</small>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="border p-3 rounded">
+            <h4 class="text-info">{{ sales_summary.total_units_sold or 0 }}</h4>
+            <small>Units Sold</small>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="border p-3 rounded">
+            <h4 class="text-success">{{ (sales_summary.total_revenue or 0)|int }}</h4>
+            <small>Revenue (IQD)</small>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="border p-3 rounded">
+            <h4 class="text-warning">{{ (sales_summary.total_cost or 0)|int }}</h4>
+            <small>Cost (IQD)</small>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="border p-3 rounded">
+            <h4 class="text-{{ 'success' if (sales_summary.total_profit or 0) > 0 else 'danger' }}">
+              {{ (sales_summary.total_profit or 0)|int }}
+            </h4>
+            <small>Profit (IQD)</small>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="border p-3 rounded">
+            <h4 class="text-primary">
+              {% if sales_summary.total_revenue and sales_summary.total_revenue > 0 %}
+                {{ ((sales_summary.total_profit or 0) / sales_summary.total_revenue * 100)|round(1) }}%
+              {% else %}
+                0%
+              {% endif %}
+            </h4>
+            <small>Profit Margin</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Current Inventory -->
+  <div class="card mb-4">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">📦 Current Inventory Status</h5>
+    </div>
+    <div class="card-body">
+      <div class="row text-center">
+        <div class="col-md-4">
+          <div class="border p-3 rounded">
+            <h4 class="text-primary">{{ inventory_value.total_units_in_stock or 0 }}</h4>
+            <small>Total Units in Stock</small>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="border p-3 rounded">
+            <h4 class="text-warning">{{ (inventory_value.total_inventory_cost or 0)|int }}</h4>
+            <small>Inventory Cost (IQD)</small>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="border p-3 rounded">
+            <h4 class="text-success">{{ (inventory_value.total_inventory_value or 0)|int }}</h4>
+            <small>Inventory Value (IQD)</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top & Worst Performing Products -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">🏆 Top Performing Products</h5>
+        </div>
+        <div class="card-body">
+          {% if top_products %}
+            {% for product in top_products %}
+            <div class="d-flex align-items-center mb-3 border-bottom pb-2">
+              <img src="{{ product.image_url }}" class="me-3" style="width: 50px; height: 50px; object-fit: cover;">
+              <div class="flex-grow-1">
+                <strong>Product #{{ product.id }}</strong><br>
+                <small>Units Sold: {{ product.units_sold }} | Profit: {{ product.profit|int }} IQD</small>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-muted">No sales data available for this period.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-danger text-white">
+          <h5 class="mb-0">⚠️ Worst Performing Products</h5>
+        </div>
+        <div class="card-body">
+          {% if worst_products %}
+            {% for product in worst_products %}
+            <div class="d-flex align-items-center mb-3 border-bottom pb-2">
+              <img src="{{ product.image_url }}" class="me-3" style="width: 50px; height: 50px; object-fit: cover;">
+              <div class="flex-grow-1">
+                <strong>Product #{{ product.id }}</strong><br>
+                <small>Units Sold: {{ product.units_sold }} | Profit: {{ product.profit|int }} IQD</small>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-muted">No sales data available for this period.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Size Performance -->
+  <div class="card mb-4">
+    <div class="card-header bg-warning text-white">
+      <h5 class="mb-0">👕 Size Performance Analysis</h5>
+    </div>
+    <div class="card-body">
+      {% if size_performance %}
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Size</th>
+                <th>Sales Count</th>
+                <th>Total Quantity Sold</th>
+                <th>Total Revenue (IQD)</th>
+                <th>Performance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for size in size_performance %}
+              <tr>
+                <td><strong>{{ size.size }}</strong></td>
+                <td>{{ size.sales_count }}</td>
+                <td>{{ size.total_quantity }}</td>
+                <td>{{ size.total_revenue|int }}</td>
+                <td>
+                  {% if loop.index <= 3 %}
+                    <span class="badge bg-success">Hot</span>
+                  {% elif loop.index >= size_performance|length - 2 %}
+                    <span class="badge bg-danger">Slow</span>
+                  {% else %}
+                    <span class="badge bg-warning">Average</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-muted">No sales data available for this period.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Low Stock Alert -->
+  {% if low_stock_items %}
+  <div class="card mb-4">
+    <div class="card-header bg-danger text-white">
+      <h5 class="mb-0">🚨 Low Stock Alert</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        {% for product, size_qty in low_stock_items %}
+        <div class="col-md-6 mb-3">
+          <div class="alert alert-warning d-flex align-items-center">
+            <img src="{{ product.image_url }}" class="me-3" style="width: 50px; height: 50px; object-fit: cover;">
+            <div>
+              <strong>Product #{{ product.id }}</strong><br>
+              <small>Size {{ size_qty.size }}: Only {{ size_qty.quantity }} left!</small>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Daily Sales Trend -->
+  <div class="card mb-4">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">📈 Daily Sales Trend</h5>
+    </div>
+    <div class="card-body">
+      {% if daily_sales %}
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Sales Count</th>
+                <th>Units Sold</th>
+                <th>Revenue (IQD)</th>
+                <th>Profit (IQD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for day in daily_sales %}
+              <tr>
+                <td>{{ day.sale_date }}</td>
+                <td>{{ day.sales_count }}</td>
+                <td>{{ day.units_sold }}</td>
+                <td>{{ day.revenue|int }}</td>
+                <td class="text-{{ 'success' if day.profit > 0 else 'danger' }}">
+                  {{ day.profit|int }}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-muted">No sales data available for this period.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- All Products Performance -->
+  <div class="card">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">📋 All Products Performance</h5>
+    </div>
+    <div class="card-body">
+      {% if product_performance %}
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Units Sold</th>
+                <th>Revenue (IQD)</th>
+                <th>Cost (IQD)</th>
+                <th>Profit (IQD)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for product in product_performance %}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <img src="{{ product.image_url }}" class="me-3" style="width: 40px; height: 40px; object-fit: cover;">
+                    <div>
+                      <strong>Product #{{ product.id }}</strong><br>
+                      <small class="text-muted">{{ product.selling_price|int }} IQD each</small>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ product.units_sold }}</td>
+                <td>{{ product.revenue|int }}</td>
+                <td>{{ product.cost|int }}</td>
+                <td class="text-{{ 'success' if product.profit > 0 else 'danger' }}">
+                  {{ product.profit|int }}
+                </td>
+                <td>
+                  {% if product.profit > 10000 %}
+                    <span class="badge bg-success">Excellent</span>
+                  {% elif product.profit > 5000 %}
+                    <span class="badge bg-primary">Good</span>
+                  {% elif product.profit > 0 %}
+                    <span class="badge bg-warning">Average</span>
+                  {% else %}
+                    <span class="badge bg-danger">Poor</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-muted">No sales data available for this period.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

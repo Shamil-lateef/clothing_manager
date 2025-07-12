@@ -14,9 +14,8 @@ from io import StringIO
 from collections import defaultdict
 from flask_sqlalchemy import SQLAlchemy
 import os
-from datetime import datetime
-from sqlalchemy import func
-
+from datetime import datetime, timedelta
+from sqlalchemy import func, desc
 
 app = Flask(__name__)
 
@@ -161,15 +160,29 @@ def sell_product():
     if request.method == "POST":
         product_id = int(request.form["product_id"])
         size = request.form["size"]
-        quantity = int(request.form["quantity"])  # ✅ Read the actual quantity
+        quantity = int(request.form["quantity"])
 
+        # Get the product and size entry
+        product = Product.query.get_or_404(product_id)
         size_entry = SizeQuantity.query.filter_by(
             product_id=product_id, size=size
         ).first()
 
         if size_entry and size_entry.quantity >= quantity:
+            # Update inventory
             size_entry.quantity -= quantity
+
+            # Record the sale
+            sale = Sale(
+                product_id=product_id,
+                size=size,
+                quantity=quantity,
+                selling_price=product.selling_price,
+                unit_cost=product.unit_cost,
+            )
+            db.session.add(sale)
             db.session.commit()
+
             flash(f"Sold {quantity} unit(s) of size {size}.", "success")
         else:
             flash(f"Not enough stock for size '{size}'!", "danger")
@@ -325,33 +338,206 @@ def export_sales():
 @app.route("/report", methods=["GET", "POST"])
 @login_required
 def report():
-    start_date = None
-    end_date = None
-    sales = []
+    # Default to last 30 days
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=30)
 
     if request.method == "POST":
-        start_date_str = request.form["start_date"]
-        end_date_str = request.form["end_date"]
+        start_date_str = request.form.get("start_date")
+        end_date_str = request.form.get("end_date")
 
         if start_date_str and end_date_str:
             start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
             end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+            # Add 23:59:59 to end_date to include the entire day
+            end_date = end_date.replace(hour=23, minute=59, second=59)
 
-            sales = (
-                db.session.query(
-                    Product,
-                    func.count(Sale.id).label("items_sold"),
-                    func.sum(Sale.selling_price).label("total_revenue"),
-                    func.sum(Sale.unit_cost).label("total_cost"),
-                )
-                .join(Sale)
-                .filter(Sale.timestamp >= start_date, Sale.timestamp <= end_date)
-                .group_by(Product.id)
-                .all()
-            )
+    # 1. Sales Summary
+    sales_summary = (
+        db.session.query(
+            func.count(Sale.id).label("total_sales"),
+            func.sum(Sale.quantity).label("total_units_sold"),
+            func.sum(Sale.selling_price * Sale.quantity).label("total_revenue"),
+            func.sum(Sale.unit_cost * Sale.quantity).label("total_cost"),
+            func.sum((Sale.selling_price - Sale.unit_cost) * Sale.quantity).label(
+                "total_profit"
+            ),
+        )
+        .filter(Sale.timestamp >= start_date, Sale.timestamp <= end_date)
+        .first()
+    )
+
+    # 2. Product Performance
+    product_performance = (
+        db.session.query(
+            Product.id,
+            Product.image_url,
+            Product.style_url,
+            Product.selling_price,
+            func.sum(Sale.quantity).label("units_sold"),
+            func.sum(Sale.selling_price * Sale.quantity).label("revenue"),
+            func.sum(Sale.unit_cost * Sale.quantity).label("cost"),
+            func.sum((Sale.selling_price - Sale.unit_cost) * Sale.quantity).label(
+                "profit"
+            ),
+        )
+        .join(Sale)
+        .filter(Sale.timestamp >= start_date, Sale.timestamp <= end_date)
+        .group_by(Product.id)
+        .order_by(desc("profit"))
+        .all()
+    )
+
+    # 3. Size Performance
+    size_performance = (
+        db.session.query(
+            Sale.size,
+            func.count(Sale.id).label("sales_count"),
+            func.sum(Sale.quantity).label("total_quantity"),
+            func.sum(Sale.selling_price * Sale.quantity).label("total_revenue"),
+        )
+        .filter(Sale.timestamp >= start_date, Sale.timestamp <= end_date)
+        .group_by(Sale.size)
+        .order_by(desc("total_quantity"))
+        .all()
+    )
+
+    # 4. Daily Sales Trend
+    daily_sales = (
+        db.session.query(
+            func.date(Sale.timestamp).label("sale_date"),
+            func.count(Sale.id).label("sales_count"),
+            func.sum(Sale.quantity).label("units_sold"),
+            func.sum(Sale.selling_price * Sale.quantity).label("revenue"),
+            func.sum((Sale.selling_price - Sale.unit_cost) * Sale.quantity).label(
+                "profit"
+            ),
+        )
+        .filter(Sale.timestamp >= start_date, Sale.timestamp <= end_date)
+        .group_by(func.date(Sale.timestamp))
+        .order_by("sale_date")
+        .all()
+    )
+
+    # 5. Low Stock Items
+    low_stock_items = (
+        db.session.query(Product, SizeQuantity)
+        .join(SizeQuantity)
+        .filter(SizeQuantity.quantity <= 2)
+        .order_by(SizeQuantity.quantity)
+        .all()
+    )
+
+    # 6. Top Performing Products (by profit)
+    top_products = product_performance[:5] if product_performance else []
+
+    # 7. Worst Performing Products (by profit)
+    worst_products = product_performance[-5:] if len(product_performance) >= 5 else []
+
+    # 8. Current Inventory Value
+    inventory_value = (
+        db.session.query(
+            func.sum(Product.unit_cost * SizeQuantity.quantity).label(
+                "total_inventory_cost"
+            ),
+            func.sum(Product.selling_price * SizeQuantity.quantity).label(
+                "total_inventory_value"
+            ),
+            func.sum(SizeQuantity.quantity).label("total_units_in_stock"),
+        )
+        .join(SizeQuantity)
+        .first()
+    )
 
     return render_template(
-        "report.html", sales=sales, start_date=start_date, end_date=end_date
+        "report.html",
+        start_date=start_date,
+        end_date=end_date,
+        sales_summary=sales_summary,
+        product_performance=product_performance,
+        size_performance=size_performance,
+        daily_sales=daily_sales,
+        low_stock_items=low_stock_items,
+        top_products=top_products,
+        worst_products=worst_products,
+        inventory_value=inventory_value,
+    )
+
+
+@app.route("/export_detailed_report")
+@login_required
+def export_detailed_report():
+    # Get date range from query parameters
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+
+    if start_date_str and end_date_str:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+        end_date = end_date.replace(hour=23, minute=59, second=59)
+    else:
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+
+    # Get all sales data
+    sales_data = (
+        db.session.query(
+            Sale.timestamp,
+            Product.id.label("product_id"),
+            Sale.size,
+            Sale.quantity,
+            Sale.selling_price,
+            Sale.unit_cost,
+            ((Sale.selling_price - Sale.unit_cost) * Sale.quantity).label("profit"),
+        )
+        .join(Product)
+        .filter(Sale.timestamp >= start_date, Sale.timestamp <= end_date)
+        .order_by(Sale.timestamp.desc())
+        .all()
+    )
+
+    # Create CSV
+    si = StringIO()
+    writer = csv.writer(si)
+    writer.writerow(
+        [
+            "Date",
+            "Product ID",
+            "Size",
+            "Quantity",
+            "Selling Price",
+            "Unit Cost",
+            "Total Revenue",
+            "Total Cost",
+            "Profit",
+        ]
+    )
+
+    for sale in sales_data:
+        total_revenue = sale.selling_price * sale.quantity
+        total_cost = sale.unit_cost * sale.quantity
+        writer.writerow(
+            [
+                sale.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                sale.product_id,
+                sale.size,
+                sale.quantity,
+                f"{sale.selling_price:.0f}",
+                f"{sale.unit_cost:.0f}",
+                f"{total_revenue:.0f}",
+                f"{total_cost:.0f}",
+                f"{sale.profit:.0f}",
+            ]
+        )
+
+    output = si.getvalue()
+    si.close()
+
+    filename = f"detailed_report_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
+    return Response(
+        output,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment;filename={filename}"},
     )
 
 
