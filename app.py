@@ -637,17 +637,6 @@ def export_detailed_report():
     )
 
 
-@app.route("/create-admin")
-def create_admin():
-    if User.query.filter_by(username="admin").first():
-        return "Admin already exists."
-    hashed_pw = bcrypt.generate_password_hash("admin123").decode("utf-8")
-    user = User(username="admin", password_hash=hashed_pw)
-    db.session.add(user)
-    db.session.commit()
-    return "Admin user created. You can now log in at /login"
-
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
