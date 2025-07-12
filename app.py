@@ -96,7 +96,26 @@ class User(UserMixin, db.Model):
         return self.role == "admin"
 
 
-# REMOVED: db.create_all() - Let Flask-Migrate handle database creation
+# Initialize database tables
+def init_db():
+    """Initialize database tables"""
+    try:
+        db.create_all()
+        print("Database tables created successfully!")
+
+        # Create admin user if it doesn't exist
+        admin_user = User.query.filter_by(username="admin").first()
+        if not admin_user:
+            hashed_pw = bcrypt.generate_password_hash("admin123").decode("utf-8")
+            admin_user = User(username="admin", password_hash=hashed_pw, role="admin")
+            db.session.add(admin_user)
+            db.session.commit()
+            print("Admin user created successfully!")
+        else:
+            print("Admin user already exists.")
+
+    except Exception as e:
+        print(f"Error initializing database: {e}")
 
 
 def admin_required(f):
@@ -652,4 +671,8 @@ def logout():
 
 
 if __name__ == "__main__":
+    # Initialize database when app starts
+    with app.app_context():
+        init_db()
+
     app.run(host="0.0.0.0", port=10000)
