@@ -209,6 +209,41 @@ def delete_user(user_id):
     return redirect(url_for("manage_users"))
 
 
+@app.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    if request.method == "POST":
+        current_password = request.form["current_password"]
+        new_password = request.form["new_password"]
+        confirm_password = request.form["confirm_password"]
+
+        # Verify current password
+        if not current_user.check_password(current_password):
+            flash("Current password is incorrect!", "danger")
+            return redirect(url_for("change_password"))
+
+        # Check if new passwords match
+        if new_password != confirm_password:
+            flash("New passwords do not match!", "danger")
+            return redirect(url_for("change_password"))
+
+        # Check password length (optional)
+        if len(new_password) < 6:
+            flash("Password must be at least 6 characters long!", "danger")
+            return redirect(url_for("change_password"))
+
+        # Update password
+        current_user.password_hash = bcrypt.generate_password_hash(new_password).decode(
+            "utf-8"
+        )
+        db.session.commit()
+
+        flash("Password changed successfully!", "success")
+        return redirect(url_for("index"))
+
+    return render_template("change_password.html")
+
+
 @app.route("/add", methods=["GET", "POST"])
 @login_required
 @admin_required
