@@ -39,7 +39,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 
 db = SQLAlchemy(app)
-
+migrate = Migrate(app, db)  # Initialize Flask-Migrate here
 
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
@@ -668,28 +668,9 @@ def logout():
     return redirect(url_for("login"))
 
 
-# Initialize Flask-Migrate (after db is created)
-migrate = Migrate(app, db)  # <-- Add this line
-
-@app.before_first_request
-def initialize_db():
-    with app.app_context():
-        db.create_all()  # Recreate all tables
-        print("Database tables initialized!")
-
-
 if __name__ == "__main__":
     # Initialize database when app starts
     with app.app_context():
         init_db()
 
     app.run(host="0.0.0.0", port=10000)
-
-
-# Register the 'db' CLI commands
-@app.cli.command("db")
-def db_command():
-    """Initialize Flask-Migrate database commands."""
-    from flask_migrate import Migrate
-
-    Migrate(app, db)
