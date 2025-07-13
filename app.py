@@ -37,6 +37,19 @@ else:
 # Optional: Disable SQLAlchemy modification tracking for better performance
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+# Remember Me functionality
+app.config["REMEMBER_COOKIE_DURATION"] = timedelta(days=30)  # Remember for 30 days
+app.config["REMEMBER_COOKIE_SECURE"] = (
+    True  # Use HTTPS only (set to False for local development)
+)
+app.config["REMEMBER_COOKIE_HTTPONLY"] = True  # Prevent XSS attacks
+app.config["REMEMBER_COOKIE_REFRESH_EACH_REQUEST"] = (
+    False  # Don't refresh on each request
+)
+
+# Session configuration
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
+
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)  # Initialize Flask-Migrate here
@@ -129,8 +142,11 @@ def admin_required(f):
 
 # Routes
 @app.route("/")
-@login_required
 def index():
+    # If user is not logged in, redirect to login
+    if not current_user.is_authenticated:
+        return redirect(url_for("login"))
+    
     low_stock_threshold = 1
     products = Product.query.all()
 
@@ -686,13 +702,28 @@ def export_detailed_report():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    # If user is already logged in, redirect to home
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+
     if request.method == "POST":
-        user = User.query.filter_by(username=request.form["username"]).first()
-        if user and user.check_password(request.form["password"]):
-            login_user(user)
+        username = request.form["username"]
+        password = request.form["password"]
+        remember_me = request.form.get("remember_me")  # Get checkbox value
+
+        user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password):
+            # Pass remember parameter to login_user
+            login_user(user, remember=bool(remember_me))
+
+            # Redirect to next page or home
+            next_page = request.args.get("next")
+            if next_page:
+                return redirect(next_page)
             return redirect(url_for("index"))
         else:
             flash("Invalid credentials", "danger")
+
     return render_template("login.html")
 
 
