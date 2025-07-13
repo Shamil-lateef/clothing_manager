@@ -18,11 +18,6 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, desc
 from functools import wraps
 
-import sys
-
-if sys.version_info >= (3, 13):
-    raise RuntimeError("Python 3.13 is not supported. Use Python 3.11 instead.")
-
 
 app = Flask(__name__)
 
@@ -31,7 +26,7 @@ app.secret_key = "some-secret-key"  # needed for flash messages
 # Database configuration - works for both local development and production
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
-    # Production (Render/Heroku) - PostgreSQL
+    # Production (Render) - PostgreSQL
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"connect_args": {"sslmode": "require"}}
 else:
@@ -673,6 +668,13 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("login"))
+
+
+@app.before_first_request
+def initialize_db():
+    with app.app_context():
+        db.create_all()  # Recreate all tables
+        print("Database tables initialized!")
 
 
 if __name__ == "__main__":
