@@ -34,6 +34,10 @@
     <span>➕</span>
     <span>Add Product</span>
   </a>
+  <a href="{{ url_for('recent_sales') }}" class="nav-btn btn-recent-sales">
+    <span>📋</span>
+    <span>Recent Sales</span>
+  </a>
   <a href="{{ url_for('report') }}" class="nav-btn btn-reports">
     <span>📊</span>
     <span>Reports</span>
@@ -229,5 +233,19 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 </script>
+
+<style>
+.btn-recent-sales {
+  background: linear-gradient(135deg, #17a2b8, #138496);
+  color: white;
+  border: none;
+}
+
+.btn-recent-sales:hover {
+  background: linear-gradient(135deg, #138496, #117a8b);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(23, 162, 184, 0.3);
+}
+</style>
 
 {% endblock %}
