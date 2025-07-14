@@ -380,22 +380,101 @@ def sell_product():
     return render_template("sell.html", products=products)
 
 
+# Replace the existing search route in app.py with this enhanced version
+
+
 @app.route("/search", methods=["GET", "POST"])
-def search_by_size():
+def search():
     results = []
-    size_query = ""
+    search_query = ""
+    search_type = "all"
 
     if request.method == "POST":
-        size_query = request.form["size"].strip()
-        if size_query:
-            results = (
-                db.session.query(Product, SizeQuantity)
-                .join(SizeQuantity)
-                .filter(SizeQuantity.size == size_query, SizeQuantity.quantity > 0)
-                .all()
-            )
+        search_query = request.form["search_query"].strip()
+        search_type = request.form.get("search_type", "all")
 
-    return render_template("search.html", results=results, size_query=size_query)
+        if search_query:
+            # Base query joining Product and SizeQuantity
+            base_query = db.session.query(Product, SizeQuantity).join(SizeQuantity)
+
+            if search_type == "size":
+                # Search by size only
+                results = base_query.filter(
+                    SizeQuantity.size.ilike(f"%{search_query}%"),
+                    SizeQuantity.quantity > 0,
+                ).all()
+
+            elif search_type == "season":
+                # Search by season
+                results = base_query.filter(
+                    Product.season.ilike(f"%{search_query}%"), SizeQuantity.quantity > 0
+                ).all()
+
+            elif search_type == "gender":
+                # Search by gender
+                results = base_query.filter(
+                    Product.gender.ilike(f"%{search_query}%"), SizeQuantity.quantity > 0
+                ).all()
+
+            elif search_type == "price":
+                # Search by price range (assuming user enters a number)
+                try:
+                    price_value = float(search_query)
+                    # Search for products within ±5000 IQD of the entered price
+                    results = base_query.filter(
+                        Product.selling_price.between(
+                            price_value - 5000, price_value + 5000
+                        ),
+                        SizeQuantity.quantity > 0,
+                    ).all()
+                except ValueError:
+                    results = []
+
+            elif search_type == "product_id":
+                # Search by product ID
+                try:
+                    product_id = int(search_query)
+                    results = base_query.filter(
+                        Product.id == product_id, SizeQuantity.quantity > 0
+                    ).all()
+                except ValueError:
+                    results = []
+
+            else:  # search_type == "all"
+                # Comprehensive search across multiple fields
+                results = base_query.filter(
+                    db.or_(
+                        # Search in sizes
+                        SizeQuantity.size.ilike(f"%{search_query}%"),
+                        # Search in season
+                        Product.season.ilike(f"%{search_query}%"),
+                        # Search in gender
+                        Product.gender.ilike(f"%{search_query}%"),
+                        # Search in product ID (if it's a number)
+                        (
+                            Product.id == int(search_query)
+                            if search_query.isdigit()
+                            else False
+                        ),
+                    ),
+                    SizeQuantity.quantity > 0,
+                ).all()
+
+    # Remove duplicates while preserving order
+    unique_results = []
+    seen = set()
+    for product, size in results:
+        key = (product.id, size.id)
+        if key not in seen:
+            seen.add(key)
+            unique_results.append((product, size))
+
+    return render_template(
+        "search.html",
+        results=unique_results,
+        search_query=search_query,
+        search_type=search_type,
+    )
 
 
 @app.route("/edit/<int:product_id>", methods=["GET", "POST"])

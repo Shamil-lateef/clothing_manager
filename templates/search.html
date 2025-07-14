@@ -2,32 +2,155 @@
 {% block content %}
 <a href="{{ url_for('index') }}" class="btn btn-secondary mb-3">← Back to Home</a>
 
-<form method="POST" class="mb-4">
-  <div class="input-group">
-    <input type="text" name="size" class="form-control" placeholder="Enter size (e.g. 2T)" required value="{{ size_query }}">
-    <button class="btn btn-primary">Search</button>
+<div class="card mb-4">
+  <div class="card-body">
+    <h5 class="card-title">🔍 Advanced Search</h5>
+    <form method="POST">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-6">
+          <label for="search_query" class="form-label">Search Query</label>
+          <input type="text" name="search_query" id="search_query" class="form-control" 
+                 placeholder="Enter search term..." required value="{{ search_query }}">
+        </div>
+        <div class="col-md-4">
+          <label for="search_type" class="form-label">Search Type</label>
+          <select name="search_type" id="search_type" class="form-select">
+            <option value="all" {% if search_type == "all" %}selected{% endif %}>🔍 All Fields</option>
+            <option value="size" {% if search_type == "size" %}selected{% endif %}>📏 Size Only</option>
+            <option value="season" {% if search_type == "season" %}selected{% endif %}>🌞 Season Only</option>
+            <option value="gender" {% if search_type == "gender" %}selected{% endif %}>👶 Gender Only</option>
+            <option value="price" {% if search_type == "price" %}selected{% endif %}>💰 Price Range</option>
+            <option value="product_id" {% if search_type == "product_id" %}selected{% endif %}>🔢 Product ID</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-primary w-100">Search</button>
+        </div>
+      </div>
+    </form>
+    
+    <!-- Search help text -->
+    <div class="mt-3">
+      <small class="text-muted">
+        <strong>Search tips:</strong><br>
+        • <strong>All Fields:</strong> Search across sizes, seasons, gender, and product ID<br>
+        • <strong>Size:</strong> e.g., "2T", "90", "XL"<br>
+        • <strong>Season:</strong> "Summer", "Winter", "Spring/Autumn"<br>
+        • <strong>Gender:</strong> "Boys", "Girls"<br>
+        • <strong>Price:</strong> Enter a price to find products within ±5000 IQD<br>
+        • <strong>Product ID:</strong> Enter exact product number
+      </small>
+    </div>
   </div>
-</form>
+</div>
 
-{% if size_query %}
-  <h5>Results for size: <strong>{{ size_query }}</strong></h5>
+{% if search_query %}
+  <div class="alert alert-info">
+    <strong>Search Results for:</strong> "{{ search_query }}" 
+    {% if search_type != "all" %}
+      <span class="badge bg-primary ms-2">{{ search_type.title() }} Search</span>
+    {% endif %}
+  </div>
+  
   {% if results %}
-    <div class="row row-cols-1 row-cols-md-2 g-4 mt-3">
+    <div class="row mb-3">
+      <div class="col">
+        <h6>Found {{ results|length }} result(s)</h6>
+      </div>
+    </div>
+    
+    <div class="row row-cols-1 row-cols-md-2 g-4">
       {% for product, size in results %}
       <div class="col">
         <div class="card h-100">
-          <img src="{{ product.image_url }}" class="card-img-top" alt="Product Image">
+          <div class="position-relative">
+            <img src="{{ product.image_url }}" class="img-fluid mb-2" alt="Product Image">
+            <!-- Category badges -->
+            <div class="position-absolute top-0 start-0 m-2">
+              <span class="badge bg-{% if product.season == 'Summer' %}warning{% elif product.season == 'Winter' %}info{% else %}success{% endif %} me-1">
+                {{ product.season }}
+              </span>
+              <span class="badge bg-{% if product.gender == 'Boys' %}primary{% else %}danger{% endif %}">
+                {{ product.gender }}
+              </span>
+            </div>
+            <!-- Product ID badge -->
+            <div class="position-absolute top-0 end-0 m-2">
+              <span class="badge bg-dark">ID: {{ product.id }}</span>
+            </div>
+          </div>
+          
           <div class="card-body">
-            <h5 class="card-title"><a href="{{ product.style_url }}" target="_blank">View Style</a></h5>
-            <p><strong>Available ({{ size.size }}):</strong> {{ size.quantity }}</p>
-            <p><strong>Selling Price:</strong> {{ product.selling_price|int }} IQD</p>
+            <h5 class="card-title">
+              <a href="{{ product.style_url }}" target="_blank" class="text-decoration-none">
+                View Style ↗
+              </a>
+            </h5>
+            <div class="mb-2">
+              <span class="badge bg-info me-1">Size: {{ size.size }}</span>
+              <span class="badge bg-success">{{ size.quantity }} available</span>
+            </div>
+            <p class="mb-2"><strong>Price:</strong> {{ product.selling_price|int }} IQD</p>
+            <p class="mb-2"><strong>Category:</strong> {{ product.season }} - {{ product.gender }}</p>
+            
+            <!-- Show all sizes for this product -->
+            <div class="mt-3">
+              <h6>All Available Sizes:</h6>
+              <div class="d-flex flex-wrap gap-1">
+                {% for sq in product.sizes %}
+                  {% if sq.quantity > 0 %}
+                    <span class="badge bg-outline-secondary border">
+                      {{ sq.size }}: {{ sq.quantity }}
+                    </span>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+            
+            <!-- Quick sell button -->
+            <div class="mt-3">
+              <a href="{{ url_for('sell_product') }}?product_id={{ product.id }}&size={{ size.size }}" 
+                 class="btn btn-sm btn-warning">
+                💰 Quick Sell
+              </a>
+            </div>
           </div>
         </div>
       </div>
       {% endfor %}
     </div>
   {% else %}
-    <p class="text-danger mt-3">No products found for that size.</p>
+    <div class="alert alert-warning">
+      <h5>No Results Found</h5>
+      <p>No products found for "{{ search_query }}"{% if search_type != "all" %} in {{ search_type }}{% endif %}.</p>
+      <p><strong>Try:</strong></p>
+      <ul>
+        <li>Checking your spelling</li>
+        <li>Using different keywords</li>
+        <li>Selecting "All Fields" for broader search</li>
+        <li>Searching for partial matches (e.g., "2" instead of "2T")</li>
+      </ul>
+    </div>
   {% endif %}
 {% endif %}
+
+<script>
+// Update placeholder text based on search type
+document.getElementById('search_type').addEventListener('change', function() {
+  const searchInput = document.getElementById('search_query');
+  const searchType = this.value;
+  
+  const placeholders = {
+    'all': 'Enter search term...',
+    'size': 'e.g., 2T, 90, XL',
+    'season': 'e.g., Summer, Winter',
+    'gender': 'e.g., Boys, Girls',
+    'price': 'e.g., 25000 (will find ±5000 IQD)',
+    'product_id': 'e.g., 123'
+  };
+  
+  searchInput.placeholder = placeholders[searchType] || 'Enter search term...';
+});
+</script>
+
 {% endblock %}
