@@ -111,6 +111,19 @@ class User(UserMixin, db.Model):
         return self.role == "admin"
 
 
+class SaleRevert(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sale_id = db.Column(db.Integer, db.ForeignKey("sale.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=False)
+    size = db.Column(db.String(50), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    selling_price = db.Column(db.Float, nullable=False)
+    unit_cost = db.Column(db.Float, nullable=False)
+    revert_timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+    reverted_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    reason = db.Column(db.String(500))  # Optional reason for the revert
+
+
 # Initialize database tables
 def init_db():
     """Initialize database tables"""
@@ -843,6 +856,148 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("login"))
+
+
+# Add this new route for viewing recent sales
+@app.route("/recent-sales")
+@login_required
+def recent_sales():
+    # Get sales from the last 7 days that haven't been reverted
+    seven_days_ago = datetime.now() - timedelta(days=7)
+
+    recent_sales = (
+        db.session.query(Sale, Product)
+        .join(Product)
+        .filter(Sale.timestamp >= seven_days_ago)
+        .order_by(Sale.timestamp.desc())
+        .all()
+    )
+
+    return render_template("recent_sales.html", recent_sales=recent_sales)
+
+
+# Add this new route for reverting a sale
+@app.route("/revert-sale/<int:sale_id>", methods=["POST"])
+@login_required
+@admin_required
+def revert_sale(sale_id):
+    try:
+        # Get the sale record
+        sale = Sale.query.get_or_404(sale_id)
+
+        # Check if sale was already reverted
+        existing_revert = SaleRevert.query.filter_by(sale_id=sale_id).first()
+        if existing_revert:
+            flash("This sale has already been reverted!", "danger")
+            return redirect(url_for("recent_sales"))
+
+        # Get the product and size entry
+        product = Product.query.get_or_404(sale.product_id)
+        size_entry = SizeQuantity.query.filter_by(
+            product_id=sale.product_id, size=sale.size
+        ).first()
+
+        if not size_entry:
+            # If size entry doesn't exist, create it
+            size_entry = SizeQuantity(
+                product_id=sale.product_id, size=sale.size, quantity=0
+            )
+            db.session.add(size_entry)
+
+        # Restore the quantity back to inventory
+        size_entry.quantity += sale.quantity
+
+        # Get the reason from the form (optional)
+        reason = request.form.get("reason", "")
+
+        # Record the revert
+        revert_record = SaleRevert(
+            sale_id=sale.id,
+            product_id=sale.product_id,
+            size=sale.size,
+            quantity=sale.quantity,
+            selling_price=sale.selling_price,
+            unit_cost=sale.unit_cost,
+            reverted_by=current_user.id,
+            reason=reason,
+        )
+        db.session.add(revert_record)
+
+        # Commit all changes
+        db.session.commit()
+
+        flash(
+            f"Sale reverted successfully! {sale.quantity} unit(s) of size {sale.size} restored to inventory.",
+            "success",
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error reverting sale: {str(e)}", "danger")
+
+    return redirect(url_for("recent_sales"))
+
+
+# Add this route to get sale details via AJAX
+@app.route("/sale-details/<int:sale_id>")
+@login_required
+@admin_required
+def sale_details(sale_id):
+    sale = Sale.query.get_or_404(sale_id)
+    product = Product.query.get_or_404(sale.product_id)
+
+    # Check if already reverted
+    existing_revert = SaleRevert.query.filter_by(sale_id=sale_id).first()
+
+    return jsonify(
+        {
+            "id": sale.id,
+            "product_id": sale.product_id,
+            "size": sale.size,
+            "quantity": sale.quantity,
+            "selling_price": sale.selling_price,
+            "unit_cost": sale.unit_cost,
+            "timestamp": sale.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            "product_image": product.image_url,
+            "product_style_url": product.style_url,
+            "season": product.season,
+            "gender": product.gender,
+            "is_reverted": existing_revert is not None,
+            "revert_details": (
+                {
+                    "reverted_by": (
+                        existing_revert.reverted_by if existing_revert else None
+                    ),
+                    "revert_timestamp": (
+                        existing_revert.revert_timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                        if existing_revert
+                        else None
+                    ),
+                    "reason": existing_revert.reason if existing_revert else None,
+                }
+                if existing_revert
+                else None
+            ),
+        }
+    )
+
+
+# Add this route to view revert history
+@app.route("/revert-history")
+@login_required
+@admin_required
+def revert_history():
+    reverts = (
+        db.session.query(SaleRevert, Product, User)
+        .join(Product, SaleRevert.product_id == Product.id)
+        .join(User, SaleRevert.reverted_by == User.id)
+        .order_by(SaleRevert.revert_timestamp.desc())
+        .all()
+    )
+
+    return render_template("revert_history.html", reverts=reverts)
+
+
 
 
 if __name__ == "__main__":

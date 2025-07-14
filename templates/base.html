@@ -56,6 +56,9 @@
                 <a class="nav-link" href="{{ url_for('add_product') }}">➕ Add Product</a>
               </li>
               <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('recent_sales') }}">🔄 Recent Sales</a>
+              </li>
+              <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('report') }}">📊 Reports</a>
               </li>
             {% endif %}
@@ -67,6 +70,7 @@
                 <li><a class="dropdown-item" href="{{ url_for('change_password') }}">🔒 Change Password</a></li>
                 {% if current_user.is_admin() %}
                   <li><a class="dropdown-item" href="{{ url_for('manage_users') }}">👥 Manage Users</a></li>
+                  <li><a class="dropdown-item" href="{{ url_for('revert_history') }}">📚 Revert History</a></li>
                 {% endif %}
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{{ url_for('logout') }}">🚪 Logout</a></li>

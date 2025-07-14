@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>📚 Revert History</h3>
+    <div>
+      <a href="{{ url_for('recent_sales') }}" class="btn btn-outline-primary">📋 Recent Sales</a>
+      <a href="{{ url_for('index') }}" class="btn btn-secondary">🏠 Back to Home</a>
+    </div>
+  </div>
+
+  {% if reverts %}
+  <div class="table-responsive">
+    <table class="table table-striped table-hover">
+      <thead class="table-dark">
+        <tr>
+          <th>Revert ID</th>
+          <th>Original Sale</th>
+          <th>Product</th>
+          <th>Size</th>
+          <th>Quantity</th>
+          <th>Amount</th>
+          <th>Reverted By</th>
+          <th>Revert Date</th>
+          <th>Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for revert, product, user in reverts %}
+        <tr>
+          <td>
+            <span class="badge bg-warning text-dark">#{{ revert.id }}</span>
+          </td>
+          <td>
+            <span class="badge bg-info">#{{ revert.sale_id }}</span>
+          </td>
+          <td>
+            <div class="d-flex align-items-center">
+              <img src="{{ product.image_url }}" alt="Product" class="me-2" style="width: 40px; height: 40px; object-fit: contain;">
+              <div>
+                <strong>Product #{{ product.id }}</strong><br>
+                <small class="text-muted">{{ product.season }} - {{ product.gender }}</small>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge bg-secondary">{{ revert.size }}</span>
+          </td>
+          <td>{{ revert.quantity }}</td>
+          <td>
+            <strong>{{ (revert.selling_price * revert.quantity)|int }} IQD</strong>
+          </td>
+          <td>
+            <span class="badge bg-success">{{ user.username }}</span>
+          </td>
+          <td>
+            <small>{{ revert.revert_timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+          </td>
+          <td>
+            {% if revert.reason %}
+              <span class="text-muted" title="{{ revert.reason }}">
+                {{ revert.reason[:50] }}{% if revert.reason|length > 50 %}...{% endif %}
+              </span>
+            {% else %}
+              <span class="text-muted">No reason provided</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Summary Statistics -->
+  <div class="row mt-4">
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h5 class="card-title">Total Reverts</h5>
+          <h3 class="text-primary">{{ reverts|length }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h5 class="card-title">Total Quantity</h5>
+          <h3 class="text-info">{{ reverts|sum(attribute='0.quantity') }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h5 class="card-title">Total Amount</h5>
+          <h3 class="text-warning">{{ '%0.0f'|format(reverts|sum(attribute='0.selling_price') * reverts|sum(attribute='0.quantity')) }} IQD</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h5 class="card-title">This Month</h5>
+          <h3 class="text-success">
+            {% set this_month = reverts|selectattr('0.revert_timestamp', 'ge', (now - timedelta(days=30)))|list %}
+            {{ this_month|length }}
+          </h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="alert alert-info text-center">
+    <h4>📭 No Reverts Found</h4>
+    <p>No sales have been reverted yet.</p>
+    <a href="{{ url_for('recent_sales') }}" class="btn btn-primary">📋 View Recent Sales</a>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.table th {
+  background-color: #343a40;
+  color: white;
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.card {
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  transition: box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+</style>
+{% endblock %}
