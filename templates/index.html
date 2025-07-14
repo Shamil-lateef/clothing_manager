@@ -1,140 +1,233 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="mb-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Welcome, {{ current_user.username }}! 
-      {% if current_user.is_admin() %}
-        <span class="badge bg-primary">Admin</span>
-      {% else %}
-        <span class="badge bg-secondary">Employee</span>
-      {% endif %}
-    </h2>
-    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">Logout</a>
-  </div>
-  
-  <!-- Navigation buttons based on role -->
-  <div class="row g-2 mb-3">
-    <div class="col-md-3">
-      <a href="{{ url_for('search') }}" class="btn btn-info w-100">🔍 Search</a>
-    </div>
-    <div class="col-md-3">
-      <a href="{{ url_for('sell_product') }}" class="btn btn-warning w-100">💰 Sell Product</a>
-    </div>
-    
-    {% if current_user.is_admin() %}
-    <!-- Admin-only buttons -->
-    <div class="col-md-2">
-      <a href="{{ url_for('add_product') }}" class="btn btn-success w-100">➕ Add Product</a>
-    </div>
-    <div class="col-md-2">
-      <a href="{{ url_for('report') }}" class="btn btn-primary w-100">📊 Reports</a>
-    </div>
-    <div class="col-md-2">
-      <a href="{{ url_for('manage_users') }}" class="btn btn-secondary w-100">👥 Users</a>
-    </div>
-    {% endif %}
-  </div>
 
-  <!-- Filter controls -->
-  <div class="card mb-4">
-    <div class="card-body">
-      <h5 class="card-title">Filter Products</h5>
-      <form method="GET" class="row g-3 align-items-end">
-        <div class="col-md-4">
-          <label for="season" class="form-label">Season</label>
-          <select name="season" id="season" class="form-select">
-            <option value="All" {% if season_filter == "All" %}selected{% endif %}>All Seasons</option>
-            <option value="Summer" {% if season_filter == "Summer" %}selected{% endif %}>Summer</option>
-            <option value="Winter" {% if season_filter == "Winter" %}selected{% endif %}>Winter</option>
-            <option value="Spring/Autumn" {% if season_filter == "Spring/Autumn" %}selected{% endif %}>Spring/Autumn</option>
-          </select>
-        </div>
-        <div class="col-md-4">
-          <label for="gender" class="form-label">Gender</label>
-          <select name="gender" id="gender" class="form-select">
-            <option value="All" {% if gender_filter == "All" %}selected{% endif %}>All Genders</option>
-            <option value="Boys" {% if gender_filter == "Boys" %}selected{% endif %}>Boys</option>
-            <option value="Girls" {% if gender_filter == "Girls" %}selected{% endif %}>Girls</option>
-          </select>
-        </div>
-        <div class="col-md-4">
-          <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
-          <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Clear</a>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Product cards -->
-<div class="row row-cols-1 row-cols-md-2 g-4">
-    {% for product in products %}
-    <div class="col">
-      <div class="card h-100">
-        <div class="position-relative">
-          <img src="{{ product.image_url }}" class="img-fluid mb-2" alt="Product Image">
-          <!-- Category badges -->
-          <div class="position-absolute top-0 start-0 m-2">
-            <span class="badge bg-{% if product.season == 'Summer' %}warning{% elif product.season == 'Winter' %}info{% else %}success{% endif %} me-1">
-              {{ product.season }}
-            </span>
-            <span class="badge bg-{% if product.gender == 'Boys' %}primary{% else %}danger{% endif %}">
-              {{ product.gender }}
-            </span>
-          </div>
-        </div>
-
-        <div class="card-body">
-          <h5 class="card-title"><a href="{{ product.style_url }}" target="_blank">View Style</a></h5>
-          <p><strong>Price:</strong> {{ product.selling_price|int }} IQD</p>
-          <p><strong>Category:</strong> {{ product.season }} - {{ product.gender }}</p>
-          
-          <!-- Stock information -->
-          <p><strong>Stock:</strong></p>
-          <ul>
-            {% for sq in product.sizes %}
-              <li {% if sq.quantity <= 1 %} style="color: red; font-weight: bold;" {% endif %}>
-                Size {{ sq.size }}: {{ sq.quantity }} sets available
-                {% if sq.quantity <= 1 %} ⚠️ Low Stock {% endif %}
-              </li>
-            {% endfor %}
-          </ul>
-          
-          {% if current_user.is_admin() %}
-          <!-- Admin-only buttons -->
-          <div class="mt-3">
-            <a href="{{ url_for('edit_product', product_id=product.id) }}" class="btn btn-sm btn-warning me-2">Edit</a>
-            <form action="{{ url_for('delete_product', product_id=product.id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('Are you sure?');">
-              <button class="btn btn-sm btn-danger">Delete</button>
-            </form>
-          </div>
-          
-          <!-- Admin-only cost information -->
-          <div class="mt-3 p-2 bg-light rounded">
-            <small class="text-muted">
-              <strong>Cost Info:</strong><br>
-              Unit Cost: {{ '%.0f'|format(product.unit_cost) }} IQD<br>
-              Total Cost: {{ '%.0f'|format(product.total_cost) }} IQD<br>
-              Shipping: {{ '%.0f'|format(product.shipping_cost) }} IQD
-            </small>
-          </div>
-          {% endif %}
-        </div>
+<!-- Header Section -->
+<div class="header animate-fade-in">
+  <div class="header-content">
+    <div>
+      <h1 class="header-title">👋 Welcome back, {{ current_user.username }}!</h1>
+      <div class="user-info">
+        {% if current_user.is_admin() %}
+          <span class="user-badge badge-admin">⚡ Admin</span>
+        {% else %}
+          <span class="user-badge badge-employee">👤 Employee</span>
+        {% endif %}
       </div>
     </div>
-    {% endfor %}
+    <a href="{{ url_for('logout') }}" class="btn-logout">🚪 Logout</a>
+  </div>
 </div>
 
+<!-- Navigation Section -->
+<div class="nav-grid animate-fade-in">
+  <a href="{{ url_for('search') }}" class="nav-btn btn-search">
+    <span>🔍</span>
+    <span>Search Products</span>
+  </a>
+  <a href="{{ url_for('sell_product') }}" class="nav-btn btn-sell">
+    <span>💰</span>
+    <span>Sell Product</span>
+  </a>
+  
+  {% if current_user.is_admin() %}
+  <a href="{{ url_for('add_product') }}" class="nav-btn btn-add">
+    <span>➕</span>
+    <span>Add Product</span>
+  </a>
+  <a href="{{ url_for('report') }}" class="nav-btn btn-reports">
+    <span>📊</span>
+    <span>Reports</span>
+  </a>
+  <a href="{{ url_for('manage_users') }}" class="nav-btn btn-users">
+    <span>👥</span>
+    <span>Manage Users</span>
+  </a>
+  {% endif %}
+</div>
+
+<!-- Filter Section -->
+<div class="card filter-section animate-fade-in">
+  <div class="card-header">
+    <h3 class="card-title">🎯 Filter Products</h3>
+  </div>
+  <div class="card-body">
+    <form method="GET" class="filter-grid">
+      <div class="form-group">
+        <label for="season" class="form-label">Season</label>
+        <select name="season" id="season" class="form-select">
+          <option value="All" {% if season_filter == "All" %}selected{% endif %}>All Seasons</option>
+          <option value="Summer" {% if season_filter == "Summer" %}selected{% endif %}>☀️ Summer</option>
+          <option value="Winter" {% if season_filter == "Winter" %}selected{% endif %}>❄️ Winter</option>
+          <option value="Spring/Autumn" {% if season_filter == "Spring/Autumn" %}selected{% endif %}>🍂 Spring/Autumn</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="gender" class="form-label">Gender</label>
+        <select name="gender" id="gender" class="form-select">
+          <option value="All" {% if gender_filter == "All" %}selected{% endif %}>All Genders</option>
+          <option value="Boys" {% if gender_filter == "Boys" %}selected{% endif %}>👦 Boys</option>
+          <option value="Girls" {% if gender_filter == "Girls" %}selected{% endif %}>👧 Girls</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <div class="filter-actions">
+          <button type="submit" class="nav-btn btn-reports">Apply Filters</button>
+          <a href="{{ url_for('index') }}" class="nav-btn btn-users">Clear All</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Products Section -->
+<div class="product-grid animate-fade-in">
+  {% for product in products %}
+  <div class="product-card">
+    <div class="product-image-container">
+      <img src="{{ product.image_url }}" class="product-image" alt="Product Image">
+      <div class="product-badges">
+        <span class="product-badge badge-{% if product.season == 'Summer' %}summer{% elif product.season == 'Winter' %}winter{% else %}spring{% endif %}">
+          {% if product.season == 'Summer' %}☀️{% elif product.season == 'Winter' %}❄️{% else %}🍂{% endif %}
+          {{ product.season }}
+        </span>
+        <span class="product-badge badge-{% if product.gender == 'Boys' %}boys{% else %}girls{% endif %}">
+          {% if product.gender == 'Boys' %}👦{% else %}👧{% endif %}
+          {{ product.gender }}
+        </span>
+      </div>
+    </div>
+
+    <div class="product-info">
+      <h3 class="product-title">
+        <a href="{{ product.style_url }}" target="_blank" style="text-decoration: none; color: inherit;">
+          🔗 Product #{{ product.id }}
+        </a>
+      </h3>
+      
+      <div class="product-price">💰 {{ product.selling_price|int }} IQD</div>
+      
+      <div class="product-category">
+        📂 {{ product.season }} Collection - {{ product.gender }}
+      </div>
+      
+      <div class="stock-section">
+        <h4 style="margin-bottom: 0.75rem; color: var(--gray-700); font-size: 1rem;">📦 Stock Available</h4>
+        <ul class="stock-list">
+          {% for sq in product.sizes %}
+          <li class="stock-item">
+            <span class="stock-size">Size {{ sq.size }}</span>
+            <span class="stock-quantity {% if sq.quantity <= 1 %}stock-low{% else %}stock-normal{% endif %}">
+              {{ sq.quantity }} sets
+              {% if sq.quantity <= 1 %}⚠️{% else %}✅{% endif %}
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      
+      {% if current_user.is_admin() %}
+      <div class="product-actions">
+        <a href="{{ url_for('edit_product', product_id=product.id) }}" class="btn-sm btn-edit">
+          ✏️ Edit
+        </a>
+        <form action="{{ url_for('delete_product', product_id=product.id) }}" method="POST" 
+              style="display:inline;" onsubmit="return confirm('⚠️ Are you sure you want to delete this product?');">
+          <button class="btn-sm btn-delete">🗑️ Delete</button>
+        </form>
+      </div>
+      
+      <div class="cost-info">
+        <div class="cost-info-title">💼 Cost Information</div>
+        <div class="cost-details">
+          <div>📊 Unit Cost: {{ '%.0f'|format(product.unit_cost) }} IQD</div>
+          <div>📦 Total Cost: {{ '%.0f'|format(product.total_cost) }} IQD</div>
+          <div>🚚 Shipping: {{ '%.0f'|format(product.shipping_cost) }} IQD</div>
+          <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--gray-300);">
+            <strong>💰 Profit per unit: {{ '%.0f'|format(product.selling_price - product.unit_cost) }} IQD</strong>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Low Stock Alert -->
 {% if current_user.is_admin() and low_stock_items %}
-<!-- Low stock alert (admin only) -->
-<div class="alert alert-warning mt-4">
-  <h5 class="alert-heading">🚨 Low Stock Alert</h5>
-  <ul class="mb-0">
+<div class="alert alert-warning animate-fade-in">
+  <h4 class="alert-heading">🚨 Low Stock Alert</h4>
+  <ul class="alert-list">
     {% for item in low_stock_items %}
-    <li>Product #{{ item.product.id }} ({{ item.product.season }} - {{ item.product.gender }}) - Size {{ item.size }}: {{ item.quantity }} left</li>
+    <li class="alert-item">
+      <strong>Product #{{ item.product.id }}</strong> 
+      ({{ item.product.season }} - {{ item.product.gender }}) - 
+      Size {{ item.size }}: <strong style="color: var(--danger-color);">{{ item.quantity }} left</strong>
+    </li>
     {% endfor %}
   </ul>
 </div>
 {% endif %}
+
+<!-- Empty State -->
+{% if not products %}
+<div class="card animate-fade-in" style="text-align: center; padding: 3rem;">
+  <div style="font-size: 4rem; margin-bottom: 1rem;">📦</div>
+  <h3>No products found</h3>
+  <p style="color: var(--gray-600); margin-bottom: 2rem;">
+    Try adjusting your filters or add some products to get started.
+  </p>
+  {% if current_user.is_admin() %}
+  <a href="{{ url_for('add_product') }}" class="nav-btn btn-add" style="display: inline-flex; width: auto;">
+    <span>➕</span>
+    <span>Add Your First Product</span>
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+<script>
+// Add smooth scrolling and animation triggers
+document.addEventListener('DOMContentLoaded', function() {
+  // Animate elements on scroll
+  const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  };
+
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.animationDelay = '0.1s';
+        entry.target.classList.add('animate-fade-in');
+      }
+    });
+  }, observerOptions);
+
+  // Observe all product cards
+  document.querySelectorAll('.product-card').forEach(card => {
+    observer.observe(card);
+  });
+
+  // Add loading state to buttons
+  document.querySelectorAll('button[type="submit"]').forEach(button => {
+    button.addEventListener('click', function() {
+      this.style.opacity = '0.8';
+      this.innerHTML = '⏳ Loading...';
+    });
+  });
+
+  // Add confirmation for delete actions
+  document.querySelectorAll('.btn-delete').forEach(button => {
+    button.addEventListener('click', function(e) {
+      if (!confirm('⚠️ Are you sure you want to delete this product? This action cannot be undone.')) {
+        e.preventDefault();
+      }
+    });
+  });
+});
+</script>
 
 {% endblock %}
