@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-<h3>Edit Product #{{ product.id }}</h3>
+<h3>Edit Product</h3>
 <form method="POST">
   <div class="mb-3">
     <label>Image URL</label>
@@ -11,15 +11,36 @@
     <input type="url" name="style_url" class="form-control" value="{{ product.style_url }}" required>
   </div>
 
+  <!-- Category fields -->
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label>Season</label>
+      <select name="season" class="form-control" required>
+        <option value="">Select Season</option>
+        <option value="Summer" {% if product.season == "Summer" %}selected{% endif %}>Summer</option>
+        <option value="Winter" {% if product.season == "Winter" %}selected{% endif %}>Winter</option>
+        <option value="Spring/Autumn" {% if product.season == "Spring/Autumn" %}selected{% endif %}>Spring/Autumn</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label>Gender</label>
+      <select name="gender" class="form-control" required>
+        <option value="">Select Gender</option>
+        <option value="Boys" {% if product.gender == "Boys" %}selected{% endif %}>Boys</option>
+        <option value="Girls" {% if product.gender == "Girls" %}selected{% endif %}>Girls</option>
+      </select>
+    </div>
+  </div>
+
   <label>Sizes and Quantities</label>
   <div id="size-quantity-list">
-    {% for sq in sizes %}
+    {% for size in sizes %}
     <div class="row mb-2">
       <div class="col">
-        <input type="text" name="size[]" class="form-control" placeholder="Size (e.g. 2T)" value="{{ sq.size }}" required>
+        <input type="text" name="size[]" class="form-control" value="{{ size.size }}" required>
       </div>
       <div class="col">
-        <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" value="{{ sq.quantity }}" required>
+        <input type="number" name="quantity[]" class="form-control" value="{{ size.quantity }}" required>
       </div>
     </div>
     {% endfor %}
@@ -28,25 +49,14 @@
 
   <div class="mb-3">
     <label>Total Package Cost (USD)</label>
-    <input type="number" name="total_cost" step="0.01" class="form-control" value="{{ '%.2f'|format(total_cost_usd) }}" required>
-    <small class="form-text text-muted">Current value in IQD: {{ '%.0f'|format(product.total_cost) }}</small>
+    <input type="number" name="total_cost" step="0.01" class="form-control" value="{{ total_cost_usd }}" required>
   </div>
   <div class="mb-3">
     <label>Shipping Cost (USD)</label>
-    <input type="number" name="shipping_cost" step="0.01" class="form-control" value="{{ '%.2f'|format(shipping_cost_usd) }}" required>
-    <small class="form-text text-muted">Current value in IQD: {{ '%.0f'|format(product.shipping_cost) }}</small>
+    <input type="number" name="shipping_cost" step="0.01" class="form-control" value="{{ shipping_cost_usd }}" required>
   </div>
-  
-  <div class="mb-3">
-    <div class="alert alert-info">
-      <strong>Current Pricing:</strong><br>
-      Unit Cost: {{ '%.0f'|format(product.unit_cost) }} IQD<br>
-      Selling Price: {{ product.selling_price|int }} IQD
-    </div>
-  </div>
-  
   <button class="btn btn-primary">Update Product</button>
-  <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+  <a href="/" class="btn btn-secondary">Cancel</a>
 </form>
 
 <script>
@@ -56,7 +66,7 @@ function addSizeField() {
   row.className = 'row mb-2';
   row.innerHTML = `
     <div class="col">
-      <input type="text" name="size[]" class="form-control" placeholder="Size (e.g. 2T)" required>
+      <input type="text" name="size[]" class="form-control" placeholder="Size (e.g. 90)" required>
     </div>
     <div class="col">
       <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" required>

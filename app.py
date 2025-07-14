@@ -66,6 +66,7 @@ def load_user(user_id):
 
 
 # Define models
+# Updated Product model in app.py
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     image_url = db.Column(db.String(500))
@@ -74,6 +75,9 @@ class Product(db.Model):
     shipping_cost = db.Column(db.Float)
     unit_cost = db.Column(db.Float)
     selling_price = db.Column(db.Float)
+    # New categorization fields
+    season = db.Column(db.String(50), nullable=False)  # Summer, Winter, Spring/Autumn
+    gender = db.Column(db.String(50), nullable=False)  # Boys, Girls
     sizes = db.relationship("SizeQuantity", backref="product", cascade="all, delete")
 
 
@@ -146,9 +150,23 @@ def index():
     # If user is not logged in, redirect to login
     if not current_user.is_authenticated:
         return redirect(url_for("login"))
-    
+
+    # Get filter parameters
+    season_filter = request.args.get("season", "All")
+    gender_filter = request.args.get("gender", "All")
+
+    # Build query based on filters
+    query = Product.query
+
+    if season_filter != "All":
+        query = query.filter(Product.season == season_filter)
+
+    if gender_filter != "All":
+        query = query.filter(Product.gender == gender_filter)
+
+    products = query.all()
+
     low_stock_threshold = 1
-    products = Product.query.all()
 
     # Collect low stock items: list of dicts {product, size, quantity}
     low_stock_items = []
@@ -160,7 +178,11 @@ def index():
                 )
 
     return render_template(
-        "index.html", products=products, low_stock_items=low_stock_items
+        "index.html",
+        products=products,
+        low_stock_items=low_stock_items,
+        season_filter=season_filter,
+        gender_filter=gender_filter,
     )
 
 
@@ -270,6 +292,10 @@ def add_product():
         total_cost = float(request.form["total_cost"])
         shipping_cost = float(request.form["shipping_cost"])
 
+        # New category fields
+        season = request.form["season"]
+        gender = request.form["gender"]
+
         size_list = request.form.getlist("size[]")
         quantity_list = request.form.getlist("quantity[]")
 
@@ -290,7 +316,7 @@ def add_product():
             round((unit_cost + 7000) / 1000) * 1000
         )  # Round to nearest 1000 IQD
 
-        # Save product to DB
+        # Save product to DB with new categories
         product = Product(
             image_url=image_url,
             style_url=style_url,
@@ -298,6 +324,8 @@ def add_product():
             shipping_cost=shipping_cost,
             unit_cost=unit_cost,
             selling_price=selling_price,
+            season=season,
+            gender=gender,
         )
         db.session.add(product)
         db.session.flush()  # Assigns an ID
@@ -379,6 +407,10 @@ def edit_product(product_id):
     if request.method == "POST":
         product.image_url = request.form["image_url"]
         product.style_url = request.form["style_url"]
+
+        # Update categories
+        product.season = request.form["season"]
+        product.gender = request.form["gender"]
 
         # Get costs in USD (user input)
         total_cost_usd = float(request.form["total_cost"])

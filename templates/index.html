@@ -13,7 +13,7 @@
   </div>
   
   <!-- Navigation buttons based on role -->
-  <div class="row g-2">
+  <div class="row g-2 mb-3">
     <div class="col-md-3">
       <a href="{{ url_for('search_by_size') }}" class="btn btn-info w-100">🔍 Search by Size</a>
     </div>
@@ -34,6 +34,36 @@
     </div>
     {% endif %}
   </div>
+
+  <!-- Filter controls -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Filter Products</h5>
+      <form method="GET" class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label for="season" class="form-label">Season</label>
+          <select name="season" id="season" class="form-select">
+            <option value="All" {% if season_filter == "All" %}selected{% endif %}>All Seasons</option>
+            <option value="Summer" {% if season_filter == "Summer" %}selected{% endif %}>Summer</option>
+            <option value="Winter" {% if season_filter == "Winter" %}selected{% endif %}>Winter</option>
+            <option value="Spring/Autumn" {% if season_filter == "Spring/Autumn" %}selected{% endif %}>Spring/Autumn</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label for="gender" class="form-label">Gender</label>
+          <select name="gender" id="gender" class="form-select">
+            <option value="All" {% if gender_filter == "All" %}selected{% endif %}>All Genders</option>
+            <option value="Boys" {% if gender_filter == "Boys" %}selected{% endif %}>Boys</option>
+            <option value="Girls" {% if gender_filter == "Girls" %}selected{% endif %}>Girls</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
+          <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Clear</a>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <!-- Product cards -->
@@ -41,11 +71,23 @@
     {% for product in products %}
     <div class="col">
       <div class="card h-100">
-        <img src="{{ product.image_url }}" class="img-fluid mb-2" alt="Product Image">
+        <div class="position-relative">
+          <img src="{{ product.image_url }}" class="img-fluid mb-2" alt="Product Image">
+          <!-- Category badges -->
+          <div class="position-absolute top-0 start-0 m-2">
+            <span class="badge bg-{% if product.season == 'Summer' %}warning{% elif product.season == 'Winter' %}info{% else %}success{% endif %} me-1">
+              {{ product.season }}
+            </span>
+            <span class="badge bg-{% if product.gender == 'Boys' %}primary{% else %}danger{% endif %}">
+              {{ product.gender }}
+            </span>
+          </div>
+        </div>
 
         <div class="card-body">
           <h5 class="card-title"><a href="{{ product.style_url }}" target="_blank">View Style</a></h5>
           <p><strong>Price:</strong> {{ product.selling_price|int }} IQD</p>
+          <p><strong>Category:</strong> {{ product.season }} - {{ product.gender }}</p>
           
           <!-- Stock information -->
           <p><strong>Stock:</strong></p>
@@ -89,7 +131,7 @@
   <h5 class="alert-heading">🚨 Low Stock Alert</h5>
   <ul class="mb-0">
     {% for item in low_stock_items %}
-    <li>Product #{{ item.product.id }} - Size {{ item.size }}: {{ item.quantity }} left</li>
+    <li>Product #{{ item.product.id }} ({{ item.product.season }} - {{ item.product.gender }}) - Size {{ item.size }}: {{ item.quantity }} left</li>
     {% endfor %}
   </ul>
 </div>
