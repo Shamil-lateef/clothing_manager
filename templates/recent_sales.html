@@ -111,12 +111,37 @@ let currentSaleId = null;
 function showRevertModal(saleId) {
   currentSaleId = saleId;
   
+  // Show loading state
+  document.getElementById('saleDetails').innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+  
+  // Show modal immediately
+  const modal = new bootstrap.Modal(document.getElementById('revertModal'));
+  modal.show();
+  
   // Fetch sale details
   fetch(`/sale-details/${saleId}`)
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
     .then(data => {
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
       if (data.is_reverted) {
-        alert('⚠️ This sale has already been reverted!');
+        document.getElementById('saleDetails').innerHTML = `
+          <div class="alert alert-warning">
+            <h6>⚠️ This sale has already been reverted!</h6>
+            <p>Reverted on: ${data.revert_details.revert_timestamp}</p>
+            <p>Reason: ${data.revert_details.reason || 'No reason provided'}</p>
+          </div>
+        `;
+        // Hide the form and confirm button
+        document.getElementById('revertForm').style.display = 'none';
+        document.querySelector('.btn-warning').style.display = 'none';
         return;
       }
       
@@ -143,18 +168,33 @@ function showRevertModal(saleId) {
       document.getElementById('saleDetails').innerHTML = detailsHtml;
       document.getElementById('revertForm').action = `/revert-sale/${saleId}`;
       
-      // Show modal
-      const modal = new bootstrap.Modal(document.getElementById('revertModal'));
-      modal.show();
+      // Show the form and button
+      document.getElementById('revertForm').style.display = 'block';
+      document.querySelector('.btn-warning').style.display = 'inline-block';
     })
     .catch(error => {
-      console.error('Error:', error);
-      alert('Error fetching sale details');
+      console.error('Error fetching sale details:', error);
+      document.getElementById('saleDetails').innerHTML = `
+        <div class="alert alert-danger">
+          <h6>❌ Error Loading Sale Details</h6>
+          <p>Error: ${error.message}</p>
+          <p>Please try again or contact support if the problem persists.</p>
+        </div>
+      `;
+      // Hide the form and confirm button
+      document.getElementById('revertForm').style.display = 'none';
+      document.querySelector('.btn-warning').style.display = 'none';
     });
 }
 
 function confirmRevert() {
   if (confirm('⚠️ Are you sure you want to revert this sale? This action cannot be undone.')) {
+    // Show loading state on button
+    const button = document.querySelector('.btn-warning');
+    const originalText = button.innerHTML;
+    button.innerHTML = '⏳ Processing...';
+    button.disabled = true;
+    
     document.getElementById('revertForm').submit();
   }
 }

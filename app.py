@@ -1,4 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, Response
+from flask import (
+    Flask,
+    jsonify,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    Response,
+)
 from flask_login import (
     LoginManager,
     UserMixin,
@@ -62,7 +71,7 @@ bcrypt = Bcrypt(app)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return User.session.get(int(user_id))
 
 
 # Define models
@@ -938,50 +947,6 @@ def revert_sale(sale_id):
     return redirect(url_for("recent_sales"))
 
 
-# Add this route to get sale details via AJAX
-@app.route("/sale-details/<int:sale_id>")
-@login_required
-@admin_required
-def sale_details(sale_id):
-    sale = Sale.query.get_or_404(sale_id)
-    product = Product.query.get_or_404(sale.product_id)
-
-    # Check if already reverted
-    existing_revert = SaleRevert.query.filter_by(sale_id=sale_id).first()
-
-    return jsonify(
-        {
-            "id": sale.id,
-            "product_id": sale.product_id,
-            "size": sale.size,
-            "quantity": sale.quantity,
-            "selling_price": sale.selling_price,
-            "unit_cost": sale.unit_cost,
-            "timestamp": sale.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-            "product_image": product.image_url,
-            "product_style_url": product.style_url,
-            "season": product.season,
-            "gender": product.gender,
-            "is_reverted": existing_revert is not None,
-            "revert_details": (
-                {
-                    "reverted_by": (
-                        existing_revert.reverted_by if existing_revert else None
-                    ),
-                    "revert_timestamp": (
-                        existing_revert.revert_timestamp.strftime("%Y-%m-%d %H:%M:%S")
-                        if existing_revert
-                        else None
-                    ),
-                    "reason": existing_revert.reason if existing_revert else None,
-                }
-                if existing_revert
-                else None
-            ),
-        }
-    )
-
-
 # Add this route to view revert history
 @app.route("/revert-history")
 @login_required
@@ -998,6 +963,69 @@ def revert_history():
     return render_template("revert_history.html", reverts=reverts)
 
 
+# Add this route to get sale details via AJAX - FIXED VERSION
+@app.route("/sale-details/<int:sale_id>")
+@login_required
+@admin_required
+def sale_details(sale_id):
+    try:
+        sale = Sale.query.get_or_404(sale_id)
+        product = Product.query.get_or_404(sale.product_id)
+
+        # Check if already reverted
+        existing_revert = SaleRevert.query.filter_by(sale_id=sale_id).first()
+
+        return jsonify(
+            {
+                "id": sale.id,
+                "product_id": sale.product_id,
+                "size": sale.size,
+                "quantity": sale.quantity,
+                "selling_price": sale.selling_price,
+                "unit_cost": sale.unit_cost,
+                "timestamp": sale.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                "product_image": product.image_url,
+                "product_style_url": product.style_url,
+                "season": product.season,
+                "gender": product.gender,
+                "is_reverted": existing_revert is not None,
+                "revert_details": (
+                    {
+                        "reverted_by": (
+                            existing_revert.reverted_by if existing_revert else None
+                        ),
+                        "revert_timestamp": (
+                            existing_revert.revert_timestamp.strftime(
+                                "%Y-%m-%d %H:%M:%S"
+                            )
+                            if existing_revert
+                            else None
+                        ),
+                        "reason": existing_revert.reason if existing_revert else None,
+                    }
+                    if existing_revert
+                    else None
+                ),
+            }
+        )
+    except Exception as e:
+        # Add error logging to help debug
+        print(f"Error in sale_details route: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+# Add this temporary route to check your database
+@app.route("/debug-tables")
+@login_required
+@admin_required
+def debug_tables():
+    try:
+        # Check if SaleRevert table exists
+        reverts = SaleRevert.query.count()
+        sales = Sale.query.count()
+        return f"SaleRevert records: {reverts}, Sale records: {sales}"
+    except Exception as e:
+        return f"Database error: {str(e)}"
 
 
 if __name__ == "__main__":
