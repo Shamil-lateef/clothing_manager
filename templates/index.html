@@ -86,7 +86,7 @@
 </div>
 
 <!-- Products Section -->
-<div class="product-grid animate-fade-in">
+<div class="product-grid">
   {% for product in products %}
   <div class="product-card">
     <div class="product-image-container">
@@ -159,6 +159,21 @@
   {% endfor %}
 </div>
 
+<!-- Low Stock Alert -->
+{% if current_user.is_admin() and low_stock_items %}
+<div class="alert alert-warning animate-fade-in">
+  <h4 class="alert-heading">🚨 Low Stock Alert</h4>
+  <ul class="alert-list">
+    {% for item in low_stock_items %}
+    <li class="alert-item">
+      <strong>Product #{{ item.product.id }}</strong> 
+      ({{ item.product.season }} - {{ item.product.gender }}) - 
+      Size {{ item.size }}: <strong style="color: var(--danger-color);">{{ item.quantity }} left</strong>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
 
 <!-- Empty State -->
 {% if not products %}
@@ -178,28 +193,8 @@
 {% endif %}
 
 <script>
-// Add smooth scrolling and animation triggers
+// Fixed scroll animation - no more blinking!
 document.addEventListener('DOMContentLoaded', function() {
-  // Animate elements on scroll
-  const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
-  };
-
-  const observer = new IntersectionObserver(function(entries) {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.style.animationDelay = '0.1s';
-        entry.target.classList.add('animate-fade-in');
-      }
-    });
-  }, observerOptions);
-
-  // Observe all product cards
-  document.querySelectorAll('.product-card').forEach(card => {
-    observer.observe(card);
-  });
-
   // Add loading state to buttons
   document.querySelectorAll('button[type="submit"]').forEach(button => {
     button.addEventListener('click', function() {
@@ -216,6 +211,23 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
+
+  // Simple fade-in animation for product cards on page load only
+  const productCards = document.querySelectorAll('.product-card');
+  productCards.forEach((card, index) => {
+    // Add a slight delay for staggered animation effect
+    setTimeout(() => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(20px)';
+      card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+      
+      // Trigger the animation
+      requestAnimationFrame(() => {
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+      });
+    }, index * 50); // 50ms delay between each card
+  });
 });
 </script>
 
@@ -230,6 +242,18 @@ document.addEventListener('DOMContentLoaded', function() {
   background: linear-gradient(135deg, #138496, #117a8b);
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(23, 162, 184, 0.3);
+}
+
+/* Ensure smooth transitions for product cards */
+.product-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+/* Remove the animate-fade-in class from product grid to prevent scroll animations */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2rem;
 }
 </style>
 
