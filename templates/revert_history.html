@@ -78,7 +78,7 @@
       <div class="card text-center">
         <div class="card-body">
           <h5 class="card-title">Total Reverts</h5>
-          <h3 class="text-primary">{{ reverts|length }}</h3>
+          <h3 class="text-primary">{{ stats.total_reverts if stats else reverts|length }}</h3>
         </div>
       </div>
     </div>
@@ -86,7 +86,7 @@
       <div class="card text-center">
         <div class="card-body">
           <h5 class="card-title">Total Quantity</h5>
-          <h3 class="text-info">{{ reverts|sum(attribute='0.quantity') }}</h3>
+          <h3 class="text-info">{{ stats.total_quantity if stats else 0 }}</h3>
         </div>
       </div>
     </div>
@@ -94,18 +94,15 @@
       <div class="card text-center">
         <div class="card-body">
           <h5 class="card-title">Total Amount</h5>
-          <h3 class="text-warning">{{ '%0.0f'|format(reverts|sum(attribute='0.selling_price') * reverts|sum(attribute='0.quantity')) }} IQD</h3>
+          <h3 class="text-warning">{{ stats.total_amount if stats else 0 }} IQD</h3>
         </div>
       </div>
     </div>
     <div class="col-md-3">
       <div class="card text-center">
         <div class="card-body">
-          <h5 class="card-title">This Month</h5>
-          <h3 class="text-success">
-            {% set this_month = reverts|selectattr('0.revert_timestamp', 'ge', (now - timedelta(days=30)))|list %}
-            {{ this_month|length }}
-          </h3>
+          <h5 class="card-title">Last 30 Days</h5>
+          <h3 class="text-success">{{ stats.this_month_count if stats else 0 }}</h3>
         </div>
       </div>
     </div>

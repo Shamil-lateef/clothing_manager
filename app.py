@@ -938,7 +938,6 @@ def revert_sale(sale_id):
     return redirect(url_for("recent_sales"))
 
 
-
 # Add this route to view revert history
 @app.route("/revert-history")
 @login_required
@@ -952,7 +951,28 @@ def revert_history():
         .all()
     )
 
-    return render_template("revert_history.html", reverts=reverts)
+    # Calculate statistics
+    total_reverts = len(reverts)
+    total_quantity = sum(revert.quantity for revert, _, _ in reverts)
+    total_amount = sum(
+        revert.selling_price * revert.quantity for revert, _, _ in reverts
+    )
+
+    # Calculate this month (last 30 days)
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    this_month_count = sum(
+        1 for revert, _, _ in reverts if revert.revert_timestamp >= thirty_days_ago
+    )
+
+    # Pass the calculated statistics to the template
+    stats = {
+        "total_reverts": total_reverts,
+        "total_quantity": total_quantity,
+        "total_amount": int(total_amount),
+        "this_month_count": this_month_count,
+    }
+
+    return render_template("revert_history.html", reverts=reverts, stats=stats)
 
 
 # Add this route to get sale details via AJAX - FIXED VERSION
