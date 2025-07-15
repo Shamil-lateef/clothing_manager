@@ -177,7 +177,8 @@ def index():
     if gender_filter != "All":
         query = query.filter(Product.gender == gender_filter)
 
-    products = query.all()
+    # ORDER BY id DESC to show newest products first
+    products = query.order_by(Product.id.desc()).all()
 
     low_stock_threshold = 1
 
