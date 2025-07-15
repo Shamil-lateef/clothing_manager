@@ -1,13 +1,4 @@
-from flask import (
-    Flask,
-    jsonify,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    flash,
-    Response,
-)
+from flask import Flask, jsonify, render_template, request, redirect, url_for, flash, Response
 from flask_login import (
     LoginManager,
     UserMixin,
@@ -71,7 +62,7 @@ bcrypt = Bcrypt(app)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.session.get(int(user_id))
+    return User.query.get(int(user_id))
 
 
 # Define models
@@ -945,6 +936,7 @@ def revert_sale(sale_id):
         flash(f"Error reverting sale: {str(e)}", "danger")
 
     return redirect(url_for("recent_sales"))
+
 
 
 # Add this route to view revert history
