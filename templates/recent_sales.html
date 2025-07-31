@@ -3,12 +3,77 @@
 {% block content %}
 <div class="container">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>📋 Recent Sales (Last 7 Days)</h3>
+    <h3>📋 Sales Report</h3>
     <div>
       <a href="{{ url_for('revert_history') }}" class="btn btn-outline-info">📚 Revert History</a>
       <a href="{{ url_for('index') }}" class="btn btn-secondary">🏠 Back to Home</a>
     </div>
   </div>
+
+  <!-- Date Filter Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">📅 Filter by Date Range</h5>
+    </div>
+    <div class="card-body">
+      <form method="GET" class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label for="from_date" class="form-label">From Date</label>
+          <input type="date" class="form-control" id="from_date" name="from_date" value="{{ from_date }}">
+        </div>
+        <div class="col-md-4">
+          <label for="to_date" class="form-label">To Date</label>
+          <input type="date" class="form-control" id="to_date" name="to_date" value="{{ to_date }}">
+        </div>
+        <div class="col-md-4">
+          <button type="submit" class="btn btn-primary me-2">🔍 Filter</button>
+          <button type="button" class="btn btn-outline-secondary" onclick="setQuickFilter('today')">Today</button>
+          <button type="button" class="btn btn-outline-secondary" onclick="setQuickFilter('week')">Last 7 Days</button>
+          <button type="button" class="btn btn-outline-secondary" onclick="setQuickFilter('month')">Last 30 Days</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Summary Statistics -->
+  {% if stats %}
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card text-center border-primary">
+        <div class="card-body">
+          <h5 class="card-title text-primary">Total Sales</h5>
+          <h3 class="text-primary">{{ stats.total_sales }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center border-info">
+        <div class="card-body">
+          <h5 class="card-title text-info">Total Quantity</h5>
+          <h3 class="text-info">{{ stats.total_quantity }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center border-success">
+        <div class="card-body">
+          <h5 class="card-title text-success">Total Amount</h5>
+          <h3 class="text-success">{{ stats.total_amount }} IQD</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center border-warning">
+        <div class="card-body">
+          <h5 class="card-title text-warning">Date Range</h5>
+          <p class="mb-0"><small>{{ stats.from_date.strftime('%Y-%m-%d') }}</small></p>
+          <p class="mb-0"><small>to</small></p>
+          <p class="mb-0"><small>{{ stats.to_date.strftime('%Y-%m-%d') }}</small></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   {% if recent_sales %}
   <div class="table-responsive">
@@ -63,8 +128,8 @@
   </div>
   {% else %}
   <div class="alert alert-info text-center">
-    <h4>📭 No Recent Sales</h4>
-    <p>No sales have been made in the last 7 days.</p>
+    <h4>📭 No Sales Found</h4>
+    <p>No sales found for the selected date range.</p>
     <a href="{{ url_for('sell_product') }}" class="btn btn-primary">💰 Make a Sale</a>
   </div>
   {% endif %}
@@ -107,6 +172,35 @@
 
 <script>
 let currentSaleId = null;
+
+// Quick filter functions
+function setQuickFilter(period) {
+  const today = new Date();
+  const toDate = today.toISOString().split('T')[0];
+  let fromDate;
+  
+  switch(period) {
+    case 'today':
+      fromDate = toDate;
+      break;
+    case 'week':
+      const weekAgo = new Date(today);
+      weekAgo.setDate(today.getDate() - 7);
+      fromDate = weekAgo.toISOString().split('T')[0];
+      break;
+    case 'month':
+      const monthAgo = new Date(today);
+      monthAgo.setDate(today.getDate() - 30);
+      fromDate = monthAgo.toISOString().split('T')[0];
+      break;
+  }
+  
+  document.getElementById('from_date').value = fromDate;
+  document.getElementById('to_date').value = toDate;
+  
+  // Auto-submit the form
+  document.querySelector('form').submit();
+}
 
 function showRevertModal(saleId) {
   currentSaleId = saleId;
@@ -199,10 +293,12 @@ function confirmRevert() {
   }
 }
 
-// Auto-refresh every 30 seconds
-setInterval(function() {
-  location.reload();
-}, 30000);
+// Set max date to today
+document.addEventListener('DOMContentLoaded', function() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('from_date').max = today;
+  document.getElementById('to_date').max = today;
+});
 </script>
 
 <style>
@@ -218,6 +314,22 @@ setInterval(function() {
 .modal-body img {
   max-height: 200px;
   object-fit: contain;
+}
+
+.card {
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  transition: box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.btn-outline-secondary {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  margin-left: 0.25rem;
 }
 </style>
 {% endblock %}

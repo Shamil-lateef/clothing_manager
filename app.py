@@ -863,18 +863,59 @@ def logout():
 @app.route("/recent-sales")
 @login_required
 def recent_sales():
-    # Get sales from the last 7 days that haven't been reverted
-    seven_days_ago = datetime.now() - timedelta(days=7)
+    # Get date parameters from query string
+    from_date_str = request.args.get("from_date")
+    to_date_str = request.args.get("to_date")
 
+    # Default to last 30 days if no dates provided
+    if not from_date_str or not to_date_str:
+        to_date = datetime.now().date()
+        from_date = to_date - timedelta(days=30)
+    else:
+        try:
+            from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date()
+            to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            # If invalid dates, fall back to default
+            to_date = datetime.now().date()
+            from_date = to_date - timedelta(days=30)
+
+    # Convert dates to datetime objects for database query
+    from_datetime = datetime.combine(from_date, datetime.min.time())
+    to_datetime = datetime.combine(to_date, datetime.max.time())
+
+    # Get sales within the date range that haven't been reverted
     recent_sales = (
         db.session.query(Sale, Product)
         .join(Product)
-        .filter(Sale.timestamp >= seven_days_ago)
+        .filter(Sale.timestamp >= from_datetime)
+        .filter(Sale.timestamp <= to_datetime)
         .order_by(Sale.timestamp.desc())
         .all()
     )
 
-    return render_template("recent_sales.html", recent_sales=recent_sales)
+    # Calculate summary statistics
+    total_sales = len(recent_sales)
+    total_quantity = sum(sale.quantity for sale, product in recent_sales)
+    total_amount = sum(
+        sale.selling_price * sale.quantity for sale, product in recent_sales
+    )
+
+    stats = {
+        "total_sales": total_sales,
+        "total_quantity": total_quantity,
+        "total_amount": int(total_amount),
+        "from_date": from_date,
+        "to_date": to_date,
+    }
+
+    return render_template(
+        "recent_sales.html",
+        recent_sales=recent_sales,
+        stats=stats,
+        from_date=from_date.strftime("%Y-%m-%d"),
+        to_date=to_date.strftime("%Y-%m-%d"),
+    )
 
 
 # Add this new route for reverting a sale
