@@ -1,4 +1,13 @@
-from flask import Flask, jsonify, render_template, request, redirect, url_for, flash, Response
+from flask import (
+    Flask,
+    jsonify,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    Response,
+)
 from flask_login import (
     LoginManager,
     UserMixin,
@@ -577,7 +586,14 @@ def delete_product(product_id):
 @login_required
 @admin_required
 def export_sales():
-    sales = Sale.query.order_by(Sale.timestamp.desc()).all()
+    # Get sales excluding reverted ones
+    sales = (
+        db.session.query(Sale)
+        .outerjoin(SaleRevert, Sale.id == SaleRevert.sale_id)
+        .filter(SaleRevert.id.is_(None))  # Only include non-reverted sales
+        .order_by(Sale.timestamp.desc())
+        .all()
+    )
 
     # Create CSV in memory
     si = StringIO()
@@ -617,6 +633,9 @@ def export_sales():
     )
 
 
+# Replace the existing /report route in app.py with this updated version
+
+
 @app.route("/report", methods=["GET", "POST"])
 @login_required
 @admin_required
@@ -635,74 +654,91 @@ def report():
             # Add 23:59:59 to end_date to include the entire day
             end_date = end_date.replace(hour=23, minute=59, second=59)
 
-    # 1. Sales Summary
-    sales_summary = (
-        db.session.query(
-            func.count(Sale.id).label("total_sales"),
-            func.sum(Sale.quantity).label("total_units_sold"),
-            func.sum(Sale.selling_price * Sale.quantity).label("total_revenue"),
-            func.sum(Sale.unit_cost * Sale.quantity).label("total_cost"),
-            func.sum((Sale.selling_price - Sale.unit_cost) * Sale.quantity).label(
-                "total_profit"
-            ),
-        )
+    # Create a subquery for non-reverted sales
+    non_reverted_sales = (
+        db.session.query(Sale)
+        .outerjoin(SaleRevert, Sale.id == SaleRevert.sale_id)
+        .filter(SaleRevert.id.is_(None))
         .filter(Sale.timestamp >= start_date, Sale.timestamp <= end_date)
-        .first()
+        .subquery()
     )
 
-    # 2. Product Performance
+    # 1. Sales Summary (excluding reverted sales)
+    sales_summary = db.session.query(
+        func.count(non_reverted_sales.c.id).label("total_sales"),
+        func.sum(non_reverted_sales.c.quantity).label("total_units_sold"),
+        func.sum(
+            non_reverted_sales.c.selling_price * non_reverted_sales.c.quantity
+        ).label("total_revenue"),
+        func.sum(non_reverted_sales.c.unit_cost * non_reverted_sales.c.quantity).label(
+            "total_cost"
+        ),
+        func.sum(
+            (non_reverted_sales.c.selling_price - non_reverted_sales.c.unit_cost)
+            * non_reverted_sales.c.quantity
+        ).label("total_profit"),
+    ).first()
+
+    # 2. Product Performance (excluding reverted sales)
     product_performance = (
         db.session.query(
             Product.id,
             Product.image_url,
             Product.style_url,
             Product.selling_price,
-            func.sum(Sale.quantity).label("units_sold"),
-            func.sum(Sale.selling_price * Sale.quantity).label("revenue"),
-            func.sum(Sale.unit_cost * Sale.quantity).label("cost"),
-            func.sum((Sale.selling_price - Sale.unit_cost) * Sale.quantity).label(
-                "profit"
-            ),
+            func.sum(non_reverted_sales.c.quantity).label("units_sold"),
+            func.sum(
+                non_reverted_sales.c.selling_price * non_reverted_sales.c.quantity
+            ).label("revenue"),
+            func.sum(
+                non_reverted_sales.c.unit_cost * non_reverted_sales.c.quantity
+            ).label("cost"),
+            func.sum(
+                (non_reverted_sales.c.selling_price - non_reverted_sales.c.unit_cost)
+                * non_reverted_sales.c.quantity
+            ).label("profit"),
         )
-        .join(Sale)
-        .filter(Sale.timestamp >= start_date, Sale.timestamp <= end_date)
+        .join(non_reverted_sales, Product.id == non_reverted_sales.c.product_id)
         .group_by(Product.id)
         .order_by(desc("profit"))
         .all()
     )
 
-    # 3. Size Performance
+    # 3. Size Performance (excluding reverted sales)
     size_performance = (
         db.session.query(
-            Sale.size,
-            func.count(Sale.id).label("sales_count"),
-            func.sum(Sale.quantity).label("total_quantity"),
-            func.sum(Sale.selling_price * Sale.quantity).label("total_revenue"),
+            non_reverted_sales.c.size,
+            func.count(non_reverted_sales.c.id).label("sales_count"),
+            func.sum(non_reverted_sales.c.quantity).label("total_quantity"),
+            func.sum(
+                non_reverted_sales.c.selling_price * non_reverted_sales.c.quantity
+            ).label("total_revenue"),
         )
-        .filter(Sale.timestamp >= start_date, Sale.timestamp <= end_date)
-        .group_by(Sale.size)
+        .group_by(non_reverted_sales.c.size)
         .order_by(desc("total_quantity"))
         .all()
     )
 
-    # 4. Daily Sales Trend
+    # 4. Daily Sales Trend (excluding reverted sales)
     daily_sales = (
         db.session.query(
-            func.date(Sale.timestamp).label("sale_date"),
-            func.count(Sale.id).label("sales_count"),
-            func.sum(Sale.quantity).label("units_sold"),
-            func.sum(Sale.selling_price * Sale.quantity).label("revenue"),
-            func.sum((Sale.selling_price - Sale.unit_cost) * Sale.quantity).label(
-                "profit"
-            ),
+            func.date(non_reverted_sales.c.timestamp).label("sale_date"),
+            func.count(non_reverted_sales.c.id).label("sales_count"),
+            func.sum(non_reverted_sales.c.quantity).label("units_sold"),
+            func.sum(
+                non_reverted_sales.c.selling_price * non_reverted_sales.c.quantity
+            ).label("revenue"),
+            func.sum(
+                (non_reverted_sales.c.selling_price - non_reverted_sales.c.unit_cost)
+                * non_reverted_sales.c.quantity
+            ).label("profit"),
         )
-        .filter(Sale.timestamp >= start_date, Sale.timestamp <= end_date)
-        .group_by(func.date(Sale.timestamp))
+        .group_by(func.date(non_reverted_sales.c.timestamp))
         .order_by("sale_date")
         .all()
     )
 
-    # 5. Low Stock Items
+    # 5. Low Stock Items (this doesn't need to change)
     low_stock_items = (
         db.session.query(Product, SizeQuantity)
         .join(SizeQuantity)
@@ -717,7 +753,7 @@ def report():
     # 7. Worst Performing Products (by profit)
     worst_products = product_performance[-5:] if len(product_performance) >= 5 else []
 
-    # 8. Current Inventory Value
+    # 8. Current Inventory Value (this doesn't need to change)
     inventory_value = (
         db.session.query(
             func.sum(Product.unit_cost * SizeQuantity.quantity).label(
@@ -763,7 +799,7 @@ def export_detailed_report():
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30)
 
-    # Get all sales data
+    # Get all sales data excluding reverted sales
     sales_data = (
         db.session.query(
             Sale.timestamp,
@@ -775,7 +811,9 @@ def export_detailed_report():
             ((Sale.selling_price - Sale.unit_cost) * Sale.quantity).label("profit"),
         )
         .join(Product)
+        .outerjoin(SaleRevert, Sale.id == SaleRevert.sale_id)
         .filter(Sale.timestamp >= start_date, Sale.timestamp <= end_date)
+        .filter(SaleRevert.id.is_(None))  # Only include non-reverted sales
         .order_by(Sale.timestamp.desc())
         .all()
     )
@@ -859,7 +897,6 @@ def logout():
     return redirect(url_for("login"))
 
 
-# Add this new route for viewing recent sales
 @app.route("/recent-sales")
 @login_required
 def recent_sales():
@@ -885,16 +922,21 @@ def recent_sales():
     to_datetime = datetime.combine(to_date, datetime.max.time())
 
     # Get sales within the date range that haven't been reverted
+    # Using LEFT JOIN to exclude sales that have been reverted
     recent_sales = (
         db.session.query(Sale, Product)
         .join(Product)
+        .outerjoin(SaleRevert, Sale.id == SaleRevert.sale_id)
         .filter(Sale.timestamp >= from_datetime)
         .filter(Sale.timestamp <= to_datetime)
+        .filter(
+            SaleRevert.id.is_(None)
+        )  # Only include sales that haven't been reverted
         .order_by(Sale.timestamp.desc())
         .all()
     )
 
-    # Calculate summary statistics
+    # Calculate summary statistics (only for non-reverted sales)
     total_sales = len(recent_sales)
     total_quantity = sum(sale.quantity for sale, product in recent_sales)
     total_amount = sum(
